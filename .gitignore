@@ -1,0 +1,12 @@
+# ROS 2 generated folders
+build/
+install/
+log/
+
+# Python cache
+__pycache__/
+*.pyc
+
+# Simulation/Temporary files
+*.json
+.vscode/
