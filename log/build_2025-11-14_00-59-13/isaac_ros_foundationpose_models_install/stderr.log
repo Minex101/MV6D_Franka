@@ -1,0 +1,4 @@
+[31mCMake Error at CMakeLists.txt:22 (install_isaac_ros_asset):
+  Unknown CMake command "install_isaac_ros_asset".
+
+[0m

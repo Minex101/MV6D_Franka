@@ -1,0 +1,24 @@
+[0.714s] Invoking command in '/home/affan/Documents/FY_Project/src/multi_view_pkg': PYTHONPATH=/home/affan/Documents/FY_Project/build/multi_view_pkg/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/affan/Documents/FY_Project/install/multi_view_pkg/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/multi_view_pkg build --build-base /home/affan/Documents/FY_Project/build/multi_view_pkg/build install --record /home/affan/Documents/FY_Project/build/multi_view_pkg/install.log --single-version-externally-managed install_data
+[0.977s] running egg_info
+[0.978s] writing ../../build/multi_view_pkg/multi_view_pkg.egg-info/PKG-INFO
+[0.978s] writing dependency_links to ../../build/multi_view_pkg/multi_view_pkg.egg-info/dependency_links.txt
+[0.979s] writing entry points to ../../build/multi_view_pkg/multi_view_pkg.egg-info/entry_points.txt
+[0.979s] writing requirements to ../../build/multi_view_pkg/multi_view_pkg.egg-info/requires.txt
+[0.979s] writing top-level names to ../../build/multi_view_pkg/multi_view_pkg.egg-info/top_level.txt
+[0.981s] reading manifest file '../../build/multi_view_pkg/multi_view_pkg.egg-info/SOURCES.txt'
+[0.982s] writing manifest file '../../build/multi_view_pkg/multi_view_pkg.egg-info/SOURCES.txt'
+[0.982s] running build
+[0.982s] running build_py
+[0.982s] copying multi_view_pkg/coordinator_node.py -> /home/affan/Documents/FY_Project/build/multi_view_pkg/build/lib/multi_view_pkg
+[0.983s] running install
+[0.983s] running install_lib
+[0.984s] copying /home/affan/Documents/FY_Project/build/multi_view_pkg/build/lib/multi_view_pkg/coordinator_node.py -> /home/affan/Documents/FY_Project/install/multi_view_pkg/lib/python3.10/site-packages/multi_view_pkg
+[0.985s] byte-compiling /home/affan/Documents/FY_Project/install/multi_view_pkg/lib/python3.10/site-packages/multi_view_pkg/coordinator_node.py to coordinator_node.cpython-310.pyc
+[0.986s] running install_data
+[0.986s] running install_egg_info
+[0.989s] removing '/home/affan/Documents/FY_Project/install/multi_view_pkg/lib/python3.10/site-packages/multi_view_pkg-0.0.0-py3.10.egg-info' (and everything under it)
+[0.989s] Copying ../../build/multi_view_pkg/multi_view_pkg.egg-info to /home/affan/Documents/FY_Project/install/multi_view_pkg/lib/python3.10/site-packages/multi_view_pkg-0.0.0-py3.10.egg-info
+[0.991s] running install_scripts
+[1.009s] Installing mover script to /home/affan/Documents/FY_Project/install/multi_view_pkg/lib/multi_view_pkg
+[1.010s] writing list of installed files to '/home/affan/Documents/FY_Project/build/multi_view_pkg/install.log'
+[1.041s] Invoked command in '/home/affan/Documents/FY_Project/src/multi_view_pkg' returned '0': PYTHONPATH=/home/affan/Documents/FY_Project/build/multi_view_pkg/prefix_override:/usr/lib/python3/dist-packages/colcon_core/task/python/colcon_distutils_commands:/home/affan/Documents/FY_Project/install/multi_view_pkg/lib/python3.10/site-packages:${PYTHONPATH} /usr/bin/python3 -W ignore:setup.py install is deprecated -W ignore:easy_install command is deprecated setup.py egg_info --egg-base ../../build/multi_view_pkg build --build-base /home/affan/Documents/FY_Project/build/multi_view_pkg/build install --record /home/affan/Documents/FY_Project/build/multi_view_pkg/install.log --single-version-externally-managed install_data

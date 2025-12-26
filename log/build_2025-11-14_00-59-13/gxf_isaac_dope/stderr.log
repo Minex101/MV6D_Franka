@@ -1,0 +1,6 @@
+[31mCMake Error at /usr/share/cmake-3.22/Modules/FindCUDAToolkit.cmake:675 (message):
+  Could not find nvcc, please set CUDAToolkit_ROOT.
+Call Stack (most recent call first):
+  CMakeLists.txt:29 (find_package)
+
+[0m
