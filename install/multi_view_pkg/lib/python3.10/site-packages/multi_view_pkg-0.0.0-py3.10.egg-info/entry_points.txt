@@ -1,3 +1,0 @@
-[console_scripts]
-mover = multi_view_pkg.coordinator_node:main
-

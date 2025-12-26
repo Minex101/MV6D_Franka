@@ -1,1 +1,0 @@
-Invoking command in '/home/affan/Documents/FY_Project/build/isaac_ros_pose_proc': CMAKE_PREFIX_PATH=/opt/ros/humble /usr/bin/cmake /home/affan/Documents/FY_Project/src/isaac_ros_pose_estimation/isaac_ros_pose_proc -DAMENT_CMAKE_SYMLINK_INSTALL=1 -DCMAKE_INSTALL_PREFIX=/home/affan/Documents/FY_Project/install/isaac_ros_pose_proc
