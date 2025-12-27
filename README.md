@@ -3,6 +3,7 @@ Following terminal needs to be run to start isaac-sim aND nvidia DOPE:
 1) START NVIDIA ISAAC SIM
    
 cd ./Downloads/isaacsim
+
 ./isaac-sim.sh
 
 
