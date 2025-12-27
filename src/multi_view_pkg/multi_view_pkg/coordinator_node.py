@@ -1,64 +1,71 @@
 import rclpy
 from rclpy.node import Node
-from sensor_msgs.msg import JointState
 
-class Coordinator(Node):
+from vision_msgs.msg import Detection3DArray
+from geometry_msgs.msg import PoseStamped
+from tf2_ros import Buffer, TransformListener
+import tf2_geometry_msgs #
+
+class PoseCollector(Node):
+
     def __init__(self):
-        super().__init__("coordinator_node")
+        super().__init__('franka_handler')
 
-        self.publisher_ = self.create_publisher(
-            JointState, 
-            '/joint_command', 
-            10
-        )
+        # 1. Subscriber for DOPE detections
+        self.subscription = self.create_subscription(
+            Detection3DArray,
+            '/detections',
+            self.detections_callback,
+            10)
 
-        # Joint names must match the robot in your Sim
-        self.joint_names = [
-            'panda_joint1', 'panda_joint2', 'panda_joint3', 
-            'panda_joint4', 'panda_joint5', 'panda_joint6', 'panda_joint7'
-        ]
-
-        self.waypoints = [
-            # View 1
-            [-0.36, -0.568, 0.467, -2.533, 0.063, 2.676, 0.741],
-
-            # View 2
-            [0.755, -0.508, -1.069, -2.574, -0.534, 3.019, 0.686],
-
-            # View 3
-            [1.369, -0.066, -1.377, -2.373, -0.358, 2.99, 0.661],
-
-            # View 4
-            [1.515, -0.068, -1.488, -1.869, -0.016, 2.196, 0.726],
-        ]
-
-        self.current_index = 0
-
-        # Move to a new viewpoint every 5 seconds
-        self.timer = self.create_timer(5.0, self.timer_callback)
-        self.get_logger().info("Node started using JointState mode.")
-
-    def timer_callback(self):
-        if self.current_index >= len(self.waypoints):
-            self.get_logger().info("All viewpoints finished!")
-            self.timer.cancel()
-            return
-
-        msg = JointState()
-        msg.header.stamp = self.get_clock().now().to_msg()
-        msg.name = self.joint_names
-        msg.position = self.waypoints[self.current_index]
-
-        self.publisher_.publish(msg)
-        self.get_logger().info(f"Published Viewpoint {self.current_index + 1} to /joint_command")
+        # 2. TF2 Buffer and Listener
+        self.tf_buffer = Buffer()
+        self.tf_listener = TransformListener(self.tf_buffer, self)
         
-        self.current_index += 1
+        # Target frame for transformations
+        self.target_frame = 'World'
+        self.get_logger().info('Node started, waiting for detections...')
+
+    def detections_callback(self, msg):
+        detection_header = msg.header
+        for detection in msg.detections:
+            for result in detection.results:
+                
+                # Create the 'Stamped' version of the pose
+                pose_stamped = PoseStamped()
+                pose_stamped.header = detection_header
+                pose_stamped.pose = result.pose.pose
+
+                try:
+                    # Transform the stamped pose to the target frame
+                    transformed_pose = self.tf_buffer.transform(
+                        pose_stamped,
+                        self.target_frame,
+                        timeout=rclpy.duration.Duration(seconds=0.1)
+                    )
+                    
+                    # Accessing position
+                    p = transformed_pose.pose.position
+
+                    # Accessing orientation (Quaternions: x, y, z, w)
+                    q = transformed_pose.pose.orientation
+
+                    self.get_logger().info(
+                        f'Pos: ({p.x:.2f}, {p.y:.2f}, {p.z:.2f}) | '
+                        f'Ori: (x={q.x:.2f}, y={q.y:.2f}, z={q.z:.2f}, w={q.w:.2f})'
+)
+
+                except Exception as e:
+                    self.get_logger().error(f'Transformation failed: {e}')
 
 def main(args=None):
     rclpy.init(args=args)
-    node = Coordinator()
-    rclpy.spin(node)
-    node.destroy_node()
+    pose_collector = PoseCollector()
+    try:
+        rclpy.spin(pose_collector)
+    except KeyboardInterrupt:
+        pass
+    pose_collector.destroy_node()
     rclpy.shutdown()
 
 if __name__ == '__main__':
