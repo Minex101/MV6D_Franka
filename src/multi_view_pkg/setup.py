@@ -25,6 +25,7 @@ setup(
     entry_points={
         'console_scripts': [
             'mover = multi_view_pkg.coordinator_node:main',
+            'movement_node = multi_view_pkg.movement_node:main',
         ],
     },
 )
