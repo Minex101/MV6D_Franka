@@ -1,11 +1,13 @@
 Following terminal needs to be run to start isaac-sim aND nvidia DOPE:
 
 1) START NVIDIA ISAAC SIM
+   
 cd ./Downloads/isaacsim
 ./isaac-sim.sh
 
 
-2) START NVIDIA DOPE [NEW TERMINAL]
+3) START NVIDIA DOPE [NEW TERMINAL]
+   
 isaac-ros activate
 
 sudo apt-get install -y ros-jazzy-isaac-ros-dope
