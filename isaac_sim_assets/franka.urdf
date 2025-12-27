@@ -1,0 +1,286 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<robot name="">
+  <joint name="panda_finger_joint1" type="prismatic">
+    <origin xyz="-0.0584 -0.0000001 -0. " rpy="-1.5707964 -0.7853983 1.5707964"/>
+    <parent link="franka_panda_hand"/>
+    <child link="franka_panda_leftfinger"/>
+    <axis xyz="1. 0. 0."/>
+    <limit lower="0." upper="0.04" effort="7.1999998" velocity="0.2"/>
+  </joint>
+  <joint name="panda_finger_joint2" type="prismatic">
+    <origin xyz="-0.0584 -0.0000001 -0. " rpy="1.5707964 0.7853983 -1.5707964"/>
+    <parent link="franka_panda_hand"/>
+    <child link="franka_panda_rightfinger"/>
+    <axis xyz="1. 0. 0."/>
+    <limit lower="0." upper="0.04" effort="0." velocity="10."/>
+  </joint>
+  <joint name="panda_hand_joint" type="fixed">
+    <origin xyz="0.1069999 0.0000004 -0.0000002" rpy="3.1415925 0. -3.1415894"/>
+    <parent link="franka_panda_link7"/>
+    <child link="franka_panda_hand"/>
+  </joint>
+  <joint name="panda_joint1" type="revolute">
+    <origin xyz="-0. 0. 0.333" rpy="0. -1.5707964 0. "/>
+    <parent link="franka_panda_link0"/>
+    <child link="franka_panda_link1"/>
+    <axis xyz="1. 0. 0."/>
+    <limit lower="-2.8973001" upper="2.8973001" effort="87." velocity="2.1749999"/>
+  </joint>
+  <joint name="panda_joint2" type="revolute">
+    <origin xyz="0.0000003 0.0000001 -0. " rpy="0. 0. 1.5707964"/>
+    <parent link="franka_panda_link1"/>
+    <child link="franka_panda_link2"/>
+    <axis xyz="1. 0. 0."/>
+    <limit lower="-1.7628" upper="1.7628" effort="87." velocity="2.1749999"/>
+  </joint>
+  <joint name="panda_joint3" type="revolute">
+    <origin xyz="-0.0000001 -0.3159997 0. " rpy="-0.0000002 -0.0000002 -1.5707958"/>
+    <parent link="franka_panda_link2"/>
+    <child link="franka_panda_link3"/>
+    <axis xyz="1. 0. 0."/>
+    <limit lower="-2.8973001" upper="2.8973001" effort="87." velocity="2.1749999"/>
+  </joint>
+  <joint name="panda_joint4" type="revolute">
+    <origin xyz="-0. -0.0000001 -0.0824999" rpy="-0.0000002 0.0000002 -1.5707968"/>
+    <parent link="franka_panda_link3"/>
+    <child link="franka_panda_link4"/>
+    <axis xyz="1. 0. 0."/>
+    <limit lower="-3.0718" upper="-0.0698" effort="87." velocity="2.1749999"/>
+  </joint>
+  <joint name="panda_joint5" type="revolute">
+    <origin xyz="0.0000005 0.3839998 0.0824996" rpy="-0.0000003 0.0000001 1.5707946"/>
+    <parent link="franka_panda_link4"/>
+    <child link="franka_panda_link5"/>
+    <axis xyz="1. 0. 0."/>
+    <limit lower="-2.8973001" upper="2.8973001" effort="12." velocity="2.6100004"/>
+  </joint>
+  <joint name="panda_joint6" type="revolute">
+    <origin xyz="0.0000005 0.0000003 0.0000002" rpy="0.0000001 0.0000003 -1.5707946"/>
+    <parent link="franka_panda_link5"/>
+    <child link="franka_panda_link6"/>
+    <axis xyz="1. 0. 0."/>
+    <limit lower="-0.0175" upper="3.7525" effort="12." velocity="2.6100004"/>
+  </joint>
+  <joint name="panda_joint7" type="revolute">
+    <origin xyz="-0.0000002 -0.0000005 -0.0879998" rpy="-0. 0. -1.5707996"/>
+    <parent link="franka_panda_link6"/>
+    <child link="franka_panda_link7"/>
+    <axis xyz="1. 0. 0."/>
+    <limit lower="-2.8973001" upper="2.8973001" effort="12." velocity="2.6100004"/>
+  </joint>
+  <joint name="rootJoint" type="fixed">
+    <origin xyz="0. 0. 0." rpy="0. 0. 0."/>
+    <parent link="World"/>
+    <child link="franka_panda_link0"/>
+  </joint>
+  <link name="World"/>
+  <link name="franka_panda_hand">
+    <inertial>
+      <origin xyz="0. 0. 0." rpy="0. 0. 0."/>
+      <mass value="0.5583305"/>
+      <inertia ixx="0.0000002" ixy="0." ixz="0." iyy="0.0000001" iyz="0." izz="0.0000002"/>
+    </inertial>
+    <visual>
+      <origin xyz="-0.0000001 -0.0000001 0. " rpy="1.5707964 -0.7853979 -1.5707964"/>
+      <geometry>
+        <mesh filename="file:///home/affan/Documents/meshes/franka_panda_hand_geometry_panda_hand.obj" scale="1. 1. 1."/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="-0.0000001 -0.0000001 0. " rpy="1.5707964 -0.7853979 -1.5707964"/>
+      <geometry>
+        <mesh filename="file:///home/affan/Documents/meshes/franka_panda_hand_geometry_panda_hand.obj" scale="1. 1. 1."/>
+      </geometry>
+    </collision>
+  </link>
+  <link name="franka_panda_leftfinger">
+    <inertial>
+      <origin xyz="0. 0. 0." rpy="0. 0. 0."/>
+      <mass value="0.0140552"/>
+      <inertia ixx="0." ixy="0." ixz="0." iyy="0." iyz="0." izz="0."/>
+    </inertial>
+    <visual>
+      <origin xyz="-0. -0. -0.0000001" rpy="-0. -0. -1.5707967"/>
+      <geometry>
+        <mesh filename="file:///home/affan/Documents/meshes/franka_panda_leftfinger_geometry_panda_leftfinger.obj" scale="1. 1. 1."/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="-0. -0. -0.0000001" rpy="-0. -0. -1.5707967"/>
+      <geometry>
+        <mesh filename="file:///home/affan/Documents/meshes/franka_panda_leftfinger_geometry_panda_leftfinger.obj" scale="1. 1. 1."/>
+      </geometry>
+    </collision>
+  </link>
+  <link name="franka_panda_link0">
+    <inertial>
+      <origin xyz="0. 0. 0." rpy="0. 0. 0."/>
+      <mass value="2.8142028"/>
+      <inertia ixx="0.0000013" ixy="0." ixz="0." iyy="0.0000017" iyz="0." izz="0.000002"/>
+    </inertial>
+    <visual>
+      <origin xyz="-0. 0. 0." rpy="0. 0. 0."/>
+      <geometry>
+        <mesh filename="file:///home/affan/Documents/meshes/franka_panda_link0_geometry_panda_link0.obj" scale="1. 1. 1."/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="-0. 0. 0." rpy="0. 0. 0."/>
+      <geometry>
+        <mesh filename="file:///home/affan/Documents/meshes/franka_panda_link0_geometry_panda_link0.obj" scale="1. 1. 1."/>
+      </geometry>
+    </collision>
+  </link>
+  <link name="franka_panda_link1">
+    <inertial>
+      <origin xyz="0. 0. 0." rpy="0. 0. 0."/>
+      <mass value="2.3599997"/>
+      <inertia ixx="0.0000019" ixy="0." ixz="0." iyy="0.0000014" iyz="0." izz="0.0000009"/>
+    </inertial>
+    <visual>
+      <origin xyz="0.0000003 0.0000001 -0. " rpy="0. 1.5707964 0. "/>
+      <geometry>
+        <mesh filename="file:///home/affan/Documents/meshes/franka_panda_link1_geometry_panda_link1.obj" scale="1. 1. 1."/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0.0000003 0.0000001 -0. " rpy="0. 1.5707964 0. "/>
+      <geometry>
+        <mesh filename="file:///home/affan/Documents/meshes/franka_panda_link1_geometry_panda_link1.obj" scale="1. 1. 1."/>
+      </geometry>
+    </collision>
+  </link>
+  <link name="franka_panda_link2">
+    <inertial>
+      <origin xyz="0. 0. 0." rpy="0. 0. 0."/>
+      <mass value="2.3795187"/>
+      <inertia ixx="0.0000019" ixy="0." ixz="0." iyy="0.0000009" iyz="0." izz="0.0000015"/>
+    </inertial>
+    <visual>
+      <origin xyz="-0.0000002 0.0000003 -0. " rpy="-2.4923337 1.570796 -2.4923332"/>
+      <geometry>
+        <mesh filename="file:///home/affan/Documents/meshes/franka_panda_link2_geometry_panda_link2.obj" scale="1. 1. 1."/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="-0.0000002 0.0000003 -0. " rpy="-2.4923337 1.570796 -2.4923332"/>
+      <geometry>
+        <mesh filename="file:///home/affan/Documents/meshes/franka_panda_link2_geometry_panda_link2.obj" scale="1. 1. 1."/>
+      </geometry>
+    </collision>
+  </link>
+  <link name="franka_panda_link3">
+    <inertial>
+      <origin xyz="0. 0. 0." rpy="0. 0. 0."/>
+      <mass value="2.6498823"/>
+      <inertia ixx="0.0000013" ixy="0." ixz="0." iyy="0.0000015" iyz="0." izz="0.0000014"/>
+    </inertial>
+    <visual>
+      <origin xyz="-0. -0.0000001 0.0000001" rpy="2.2470412 1.570796 2.2470407"/>
+      <geometry>
+        <mesh filename="file:///home/affan/Documents/meshes/franka_panda_link3_geometry_panda_link3.obj" scale="1. 1. 1."/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="-0. -0.0000001 0.0000001" rpy="2.2470412 1.570796 2.2470407"/>
+      <geometry>
+        <mesh filename="file:///home/affan/Documents/meshes/franka_panda_link3_geometry_panda_link3.obj" scale="1. 1. 1."/>
+      </geometry>
+    </collision>
+  </link>
+  <link name="franka_panda_link4">
+    <inertial>
+      <origin xyz="0. 0. 0." rpy="0. 0. 0."/>
+      <mass value="2.6948018"/>
+      <inertia ixx="0.0000013" ixy="0." ixz="0." iyy="0.0000015" iyz="0." izz="0.0000016"/>
+    </inertial>
+    <visual>
+      <origin xyz="-0.0000001 -0.0000001 -0.0000003" rpy="-0.341949 1.570796 -0.3419507"/>
+      <geometry>
+        <mesh filename="file:///home/affan/Documents/meshes/franka_panda_link4_geometry_panda_link4.obj" scale="1. 1. 1."/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="-0.0000001 -0.0000001 -0.0000003" rpy="-0.341949 1.570796 -0.3419507"/>
+      <geometry>
+        <mesh filename="file:///home/affan/Documents/meshes/franka_panda_link4_geometry_panda_link4.obj" scale="1. 1. 1."/>
+      </geometry>
+    </collision>
+  </link>
+  <link name="franka_panda_link5">
+    <inertial>
+      <origin xyz="0. 0. 0." rpy="0. 0. 0."/>
+      <mass value="2.9812818"/>
+      <inertia ixx="0.0000033" ixy="0." ixz="0." iyy="0.0000027" iyz="0." izz="0.0000012"/>
+    </inertial>
+    <visual>
+      <origin xyz="0.0000005 0.0000003 0.0000002" rpy="1.2392414 1.570796 1.239243 "/>
+      <geometry>
+        <mesh filename="file:///home/affan/Documents/meshes/franka_panda_link5_geometry_panda_link5.obj" scale="1. 1. 1."/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0.0000005 0.0000003 0.0000002" rpy="1.2392414 1.570796 1.239243 "/>
+      <geometry>
+        <mesh filename="file:///home/affan/Documents/meshes/franka_panda_link5_geometry_panda_link5.obj" scale="1. 1. 1."/>
+      </geometry>
+    </collision>
+  </link>
+  <link name="franka_panda_link6">
+    <inertial>
+      <origin xyz="0. 0. 0." rpy="0. 0. 0."/>
+      <mass value="1.1285807"/>
+      <inertia ixx="0.0000003" ixy="0." ixz="0." iyy="0.0000004" iyz="0." izz="0.0000005"/>
+    </inertial>
+    <visual>
+      <origin xyz="-0.0000002 -0. 0.0000002" rpy="0.0000032 1.5707963 0. "/>
+      <geometry>
+        <mesh filename="file:///home/affan/Documents/meshes/franka_panda_link6_geometry_panda_link6.obj" scale="1. 1. 1."/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="-0.0000002 -0. 0.0000002" rpy="0.0000032 1.5707963 0. "/>
+      <geometry>
+        <mesh filename="file:///home/affan/Documents/meshes/franka_panda_link6_geometry_panda_link6.obj" scale="1. 1. 1."/>
+      </geometry>
+    </collision>
+  </link>
+  <link name="franka_panda_link7">
+    <inertial>
+      <origin xyz="0. 0. 0." rpy="0. 0. 0."/>
+      <mass value="0.4052913"/>
+      <inertia ixx="0.0000001" ixy="0." ixz="0." iyy="0.0000001" iyz="0." izz="0.0000001"/>
+    </inertial>
+    <visual>
+      <origin xyz="-0.0000001 0.0000001 -0.0000002" rpy="-0.0000032 1.5707963 0. "/>
+      <geometry>
+        <mesh filename="file:///home/affan/Documents/meshes/franka_panda_link7_geometry_panda_link7.obj" scale="1. 1. 1."/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="-0.0000001 0.0000001 -0.0000002" rpy="-0.0000032 1.5707963 0. "/>
+      <geometry>
+        <mesh filename="file:///home/affan/Documents/meshes/franka_panda_link7_geometry_panda_link7.obj" scale="1. 1. 1."/>
+      </geometry>
+    </collision>
+  </link>
+  <link name="franka_panda_rightfinger">
+    <inertial>
+      <origin xyz="0. 0. 0." rpy="0. 0. 0."/>
+      <mass value="0.0140552"/>
+      <inertia ixx="0." ixy="0." ixz="0." iyy="0." iyz="0." izz="0."/>
+    </inertial>
+    <visual>
+      <origin xyz="-0. -0. -0.0000001" rpy="-0. -0. 1.5707964"/>
+      <geometry>
+        <mesh filename="file:///home/affan/Documents/meshes/franka_panda_rightfinger_geometry_panda_rightfinger.obj" scale="1. 1. 1."/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="-0. -0. -0.0000001" rpy="-0. -0. 1.5707964"/>
+      <geometry>
+        <mesh filename="file:///home/affan/Documents/meshes/franka_panda_rightfinger_geometry_panda_rightfinger.obj" scale="1. 1. 1."/>
+      </geometry>
+    </collision>
+  </link>
+</robot>
