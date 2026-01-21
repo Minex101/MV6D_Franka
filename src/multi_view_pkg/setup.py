@@ -26,6 +26,10 @@ setup(
         'console_scripts': [
             'vision = multi_view_pkg.vision_node:main',
             'movement = multi_view_pkg.movement_node:main',
+            'fusion = multi_view_pkg.fusion_node:main',
+            'vision2 = multi_view_pkg.vision_node_2:main',
+            'movement2 = multi_view_pkg.movement_node_2:main',
+            'fusion2 = multi_view_pkg.fusion_node_2:main',
         ],
     },
 )
