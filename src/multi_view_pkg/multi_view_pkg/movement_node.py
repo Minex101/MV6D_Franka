@@ -18,14 +18,17 @@ class MultiViewCoordinator(Node):
         ]
 
         self.viewpoints = [
+            [0.000, -0.048, 0.000, -1.571, -0.003, 2.122, 0.767], 
             [0.266, 0.124, -0.235, -2.228, 0.266, 3.100, 0.611],
+            [2.647, -0.943, -2.897, -1.141, 0.767, 2.244, -0.830],
+            [0.486, 1.058, -0.016, -0.686, -0.830, 1.817, 2.333],
             [0.000, 0.000, 0.000, -1.571, 0.078, 1.939, 0.736],
             [-0.642, 0.105, 0.486, -2.098, 0.579, 2.672, -0.329],
-            [1.237, 0.867, -0.893, -2.098, 1.206, 3.406, 0.830],
+            [0.486, 0.295, -0.141, -1.660, -0.548, 2.061, 1.989],
         ]
 
         self.current_index = 0
-        self.timer = self.create_timer(5.0, self.timer_callback)
+        self.timer = self.create_timer(10.0, self.timer_callback)
         self.get_logger().info("Multi-View Sequence Initialized...")
 
     def timer_callback(self):
