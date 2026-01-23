@@ -23,7 +23,7 @@ class MovementCoordinator(Node):
             [0.266, 0.124, -0.235, -2.228, 0.266, 3.100, 0.611],
             [0.000, 0.000, 0.000, -1.571, 0.078, 1.939, 0.736],
             [-0.642, 0.105, 0.486, -2.098, 0.579, 2.672, -0.329],
-            # [1.237, 0.867, -0.893, -2.098, 1.206, 3.406, 0.830],
+            [0.486, 0.295, -0.141, -1.660, -0.548, 2.061, 1.989],
         ]
 
     def status_cb(self, msg):
@@ -55,7 +55,6 @@ class MovementCoordinator(Node):
         self.cmd_pub.publish(String(data="SOLVE"))
         self.get_logger().info("Scan Complete.")
 
-# --- THE FIX IS HERE ---
 async def run_node(node):
     """A helper coroutine to manage the task and the ROS spin together."""
     movement_task = asyncio.create_task(node.run_scan_pattern())
@@ -70,7 +69,6 @@ def main(args=None):
     node = MovementCoordinator()
     
     try:
-        # This starts the async engine properly
         asyncio.run(run_node(node))
     except KeyboardInterrupt:
         pass
