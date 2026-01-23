@@ -63,7 +63,7 @@ class PrecisionAccuracyTester(Node):
         if self.fused_X and self.fused_Y:
             self.ax1.scatter(self.fused_X, self.fused_Y, c="blue", label='Fused Pose Estimate', alpha=0.8)
         # Ground truth
-        self.ax1.scatter([0.871], [0.024], c="green", label='Ground Truth', s=100, marker='x')
+        self.ax1.scatter([0.975], [0.0243], c="green", label='Ground Truth', s=100, marker='x')
         self.ax1.set_title('X-Y Position Precision and Accuracy')
         self.ax1.set_xlabel('X Position (m)')
         self.ax1.set_ylabel('Y Position (m)')
@@ -82,7 +82,7 @@ class PrecisionAccuracyTester(Node):
         if self.fused_Z:
             self.ax2.axhline(y=self.fused_Z[-1], color='blue', linestyle='-', label='Fused Pose Z')
         # Ground Truth Z line
-        self.ax2.axhline(y=0.069, color='green', linestyle='-', label='Ground Truth Z')
+        self.ax2.axhline(y=0.0695, color='green', linestyle='-', label='Ground Truth Z')
         self.ax2.set_title("Z Position Precision and Accuracy")
         self.ax2.set_xlabel("Snapshot Number")
         self.ax2.set_ylabel("Z (meters)")

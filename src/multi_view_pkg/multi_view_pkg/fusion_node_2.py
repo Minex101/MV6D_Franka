@@ -61,7 +61,7 @@ class FusionNode(Node):
         self.get_logger().warn(f"Fused Pos: {avg_pos}")
         self.get_logger().warn(f"Fused Ori: {avg_ori}")
 
-        # 3. Create and publish message
+        # Create and publish message
         fused_msg = PoseWithCovarianceStamped()
         fused_msg.header.stamp = self.get_clock().now().to_msg()
         fused_msg.header.frame_id = "world"
@@ -76,7 +76,7 @@ class FusionNode(Node):
         fused_msg.pose.pose.orientation.w = avg_ori[3]
 
         self.publisher.publish(fused_msg)
-        self.get_logger().info("✅ High-accuracy fused pose published.")
+        self.get_logger().info("✅ Fused pose published.")
 
         # Reset buffers
         self.position = []
@@ -89,19 +89,14 @@ class FusionNode(Node):
         """
         # Convert to matrice
         Q = np.array(quaternions)
-
         # Compute the symmetric accumulator matrix (M)
         M = np.dot(Q.T, Q)
-
         # Normalize by the samples
         M /= len(quaternions)
-
         # Solve the eigendecomposition
         eigenvalues, eigenvectors = np.linalg.eigh(M)
-
         # Return the eigenvector with largest eigenvalue
         avg_quat = eigenvectors[:, np.argmax(eigenvalues)]
-
         # Ensure the result is a unit quaternion
         return avg_quat / np.linalg.norm(avg_quat)
 
