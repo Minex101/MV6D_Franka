@@ -1,0 +1,261 @@
+import rclpy
+from rclpy.node import Node
+
+from sensor_msgs.msg import JointState
+from std_msgs.msg import String
+from geometry_msgs.msg import PoseWithCovarianceStamped
+
+import asyncio
+import PyKDL
+import os
+from urdf_parser_py.urdf import URDF
+import math
+from kdl_parser_py.urdf import treeFromUrdfModel
+import numpy as np
+
+class MovementCoordinator(Node):
+    def __init__(self):
+        super().__init__('movement_coordinator')
+        
+        # Publisher for joint commands, fusion commands and subscriber for joint states
+        self.joint_pub = self.create_publisher(JointState, '/joint_command', 10)
+        self.cmd_pub = self.create_publisher(String, '/fusion/command', 10)
+        self.joint_sub = self.create_subscription(JointState, '/joint_states', self.joint_states_cb, 10)
+
+        # Subscriber for fusion status
+        self.status_sub = self.create_subscription(String, '/fusion/status', self.status_cb, 10)
+        self.object_pose_sub = self.create_subscription(PoseWithCovarianceStamped, '/object/pose_raw', self.object_pose_cb, 10)
+
+        # -- Define the robot metadata --
+        self.panda_joints = [
+        "panda_joint1",
+        "panda_joint2",
+        "panda_joint3",
+        "panda_joint4",
+        "panda_joint5",
+        "panda_joint6",
+        "panda_joint7",
+        ]   
+
+        # -- Predefined search viewpoints (joint configurations) --
+        self.search_viewpoints = [
+            [1.551, -0.696, -0.203, -1.076, 0.016, 1.002, 0.579],
+            [-0.016, -0.696, -0.203, -1.076, 0.016, 1.002, 0.579],
+            [-1.519, -0.696, -0.203, -1.076, 0.016, 1.002, 0.579],
+        ]
+
+        # -- URDF and KDL setup--
+        self.urdf_path = "/home/affan/Documents/FY_Project/isaac_sim_assets/franka.urdf"
+        self.base_link = "World" # Base link in URDF
+        self.ee_link = "franka_panda_hand" # End-effector link in URDF
+        self.InitializeKDL() # Load URDF and setup KDL chain
+
+        # -- state variables --
+        self.waiting_for_vision = False
+        self.object_found = False
+        self.current_joints = None
+        self.found_pose = None # Holds the pose once found by search function
+
+    def joint_states_cb(self, msg):
+        
+        """
+        Update current joint positions, ensuring correct name mapping.
+        """
+
+        try:
+            positions = []
+            for name in self.panda_joints:
+                idx = msg.name.index(name)
+                positions.append(msg.position[idx])
+            self.current_joints = np.array(positions)
+        except (ValueError, IndexError):
+            pass
+
+
+    def status_cb(self, msg):
+
+        """
+        Handle handshake from Vision Node indicating capture success.
+        """
+        
+        if msg.data == "SUCCESS":
+            self.object_found = True
+            print("Object found at pose:", self.found_pose)
+            self.waiting_for_vision = False
+
+
+    def object_pose_cb(self, msg):
+            
+        """
+        Store the object pose when received from Vision Node.
+        """
+
+        self.found_pose = msg.pose.pose
+        pos = self.found_pose.position
+        orient = self.found_pose.orientation
+        self.get_logger().warn(f"📍 SUCCESS: Received Pose x={pos.x:.3f}, y={pos.y:.3f}, z={pos.z:.3f}")
+        self.object_found = True
+    
+    def InitializeKDL(self):
+        
+        """
+        Load URDF, parse to KDL tree, and create chain for IK.
+        """
+
+        if not os.path.exists(self.urdf_path):
+            raise FileNotFoundError(f"❌ ERROR: URDF not found at {self.urdf_path}")
+        
+        with open(self.urdf_path, "rb") as f: # Read URDF as bytes to avoid XML encoding issues
+            urdf_bytes = f.read()
+            self.robot = URDF.from_xml_string(urdf_bytes)
+
+        ok, self.tree = treeFromUrdfModel(self.robot) # Parse URDF to KDL tree
+        if not ok:
+            raise RuntimeError("❌ ERROR: Failed to parse URDF to KDL tree!")
+        
+        self.chain = self.tree.getChain(self.base_link, self.ee_link)
+        self.n_joints = self.chain.getNrOfJoints()
+        print(f"INFO: KDL Chain has {self.n_joints} joints")
+        if self.n_joints == 0:
+            raise RuntimeError("❌ ERROR: Chain has 0 joints! Check base and EE link names in URDF.")
+        
+    def InverseKinematics(self):
+        """
+        Setup KDL IK solvers and solve for the pose using current joints as seed.
+        """
+
+        if self.found_pose is None:
+            raise RuntimeError("❌ ERROR: No target pose available for IK!")
+
+        # --- KDL solvers ---
+        fk_solver = PyKDL.ChainFkSolverPos_recursive(self.chain)       # Forward kinematics solver
+        ik_vel_solver = PyKDL.ChainIkSolverVel_pinv(self.chain)        # IK velocity solver (pseudo-inverse)
+        ik_solver = PyKDL.ChainIkSolverPos_NR(self.chain, fk_solver, ik_vel_solver, maxiter=100, eps=1e-6)
+
+        # --- Seed joints (starting guess) ---
+        q_init = PyKDL.JntArray(self.n_joints)
+        if self.current_joints is not None:
+            for i in range(self.n_joints):
+                q_init[i] = float(self.current_joints[i])
+        else:
+            for i in range(self.n_joints):
+                q_init[i] = 0.0  # fallback if no current joint info
+
+        # --- Target pose ---
+        target_pos = PyKDL.Vector(
+            float(self.found_pose.position.x),
+            float(self.found_pose.position.y),
+            float(self.found_pose.position.z + 0.1) # Add small offset to avoid collision with table
+        )
+        manual_roll  = 0.0          # rotation around X
+        manual_pitch = math.pi      # 3.14159 (rotation around Y)
+        manual_yaw   = 0.0          # rotation around Z
+
+        # Create the rotation manually
+        target_rot = PyKDL.Rotation.RPY(manual_roll, manual_pitch, manual_yaw)
+
+        # Use your DOPE-found position but this manual rotation
+        target_frame = PyKDL.Frame(target_rot, target_pos)
+
+        # --- Solve IK ---
+        q_out = PyKDL.JntArray(self.n_joints)
+        ret = ik_solver.CartToJnt(q_init, target_frame, q_out)
+        print("IK return code:", ret)
+
+        if ret >= 0:
+            return [q_out[i] for i in range(self.n_joints)]
+        else:
+            raise RuntimeError("❌ ERROR: IK solver failed to find a solution!")
+
+        
+    async def search_for_object(self):
+
+        self.get_logger().info("🔍 PROCESS: Sweep Search Initited!")
+        
+        for idx, pose in enumerate(self.search_viewpoints):
+            
+            await self.move_to_viewpoint(pose)
+            self.waiting_for_vision = True
+            self.get_logger().info(f"🔎 PROCESS: Searching Viewpoint {idx + 1}/{len(self.search_viewpoints)}")
+            self.cmd_pub.publish(String(data="SNAP")) # trigger snap to check for object at this viewpoint
+
+            # Check if object was found
+            if self.object_found:
+                self.get_logger().warn("🎯 SUCCESS: Object found! Search complete.")
+                break
+
+        return self.object_found
+
+
+    async def move_to_viewpoint(self, pose):
+        
+        """
+        Move robot to the specified joint pose.
+        """
+
+        target = np.array(pose)
+        msg = JointState(name=self.panda_joints, position=pose)
+        
+        arrival_threshold = 0.015 # Radians (0.8 degrees)
+        arrived = False
+
+        # Wait for physical arrival
+        while not arrived and rclpy.ok():
+            self.joint_pub.publish(msg) # Active holding
+            
+            if self.current_joints is not None:
+                error = np.max(np.abs(self.current_joints - target))
+                if error < arrival_threshold:
+                    arrived = True
+                else:
+                    await asyncio.sleep(0.1)
+            else:
+                await asyncio.sleep(0.5)
+        await asyncio.sleep(2.0) # Stabilization time
+
+
+    async def run_scan_pattern(self):
+        
+        """
+        This is the core logic loop.
+        """
+    
+        found = await self.search_for_object()
+        if not found:
+            self.get_logger().error("❌ FAILURE: Object not found after scanning all viewpoints.")
+        else:
+            pose = self.InverseKinematics()
+            await self.move_to_viewpoint(pose) # Move to the pose found by IK
+
+# ---
+
+async def run_node(node):
+    
+    """
+    A helper function to manage the task and the ROS spin together.
+    """
+
+    movement_task = asyncio.create_task(node.run_scan_pattern())
+    
+    # Continue spinning while the movement task is running
+    while rclpy.ok() and not movement_task.done():
+        rclpy.spin_once(node, timeout_sec=0)
+        await asyncio.sleep(0.01)
+
+def main(args=None):
+    rclpy.init(args=args)
+    node = MovementCoordinator()
+    
+    try:
+        asyncio.run(run_node(node))
+    except KeyboardInterrupt:
+        pass
+    finally:
+        node.destroy_node()
+        rclpy.shutdown()
+
+if __name__ == '__main__':
+    main()
+
+
+# ---
