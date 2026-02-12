@@ -59,7 +59,7 @@ class MovementCoordinator(Node):
 
         # -- TRAC-IK Setup --
         self.urdf_path = "/home/affan/Documents/FY_Project/isaac_sim_assets/franka.urdf"
-        self.base_link = "franka_panda_link0" 
+        self.base_link = "World" 
         self.ee_link = "franka_panda_hand" 
         self.InitializeTRACIK()
 
@@ -119,7 +119,7 @@ class MovementCoordinator(Node):
             self.urdf_path,
             self.base_link, 
             self.ee_link, 
-            timeout=0.10, # Time in seconds to wait for a solution before giving up 
+            timeout=0.20, # Time in seconds to wait for a solution before giving up 
             epsilon=1e-5, # The precision of the solution
             solve_type="Distance" # Minimize the distance to the target pose
         )
@@ -127,49 +127,42 @@ class MovementCoordinator(Node):
         self.n_joints = len(self.ik_solver.joint_names) # Number of joints that TRAC-IK recognizes for our robot
         self.get_logger().info(f"TRAC-IK initialized with {self.n_joints} joints")
 
-    def InverseKinematics(self):
+    def InverseKinematics(self, offset):
 
         """
-        This function computes the inverse kinematics solution for the detected object's pose.
-        It prepares a seed state for the IK solver (using current joint positions if available), constructs the desired end-effector pose as a 4x4 transformation matrix (with a fixed orientation looking
-        down and a position 10cm above the detected object), and then calls the TRAC-IK solver to find the joint angles that achieve this pose.
-        If a solution is found, it returns the joint angles as a list. If no solution is found or if the solver crashes, it logs an error and returns None.
+        This function computes the inverse kinematics for the detected object's pose using the TRAC-IK solver.
+        It constructs a desired end-effector pose that looks at the object from the left side (+Y direction) and is pitched up 90 degrees to look down at the object.
         """
 
         if self.found_pose is None:
             return None
 
 
-        if self.current_joints is not None:
-            seed_state = np.array(self.current_joints, dtype=np.float64).flatten()
-        else:
-            seed_state = np.zeros(self.ik_solver.number_of_joints, dtype=np.float64) # Default seed (all joints at 0)
+        seed_state = self.current_joints if self.current_joints is not None else np.zeros(7)
+        pos = self.found_pose.position
 
-        pos = self.found_pose.position # Extract the position of the detected object from the pose message
-        q = self.found_pose.orientation
-        rot_kdl = PyKDL.Rotation.Quaternion(q.x, q.y, q.z, q.w)
-        ee_pose = np.eye(4) # Create a 4x4 identity matrix for the end-effector pose
+        final_rot = PyKDL.Rotation.EulerZYX(offset[0], offset[1], offset[2])
 
-        for r in range(3): # Fill the rotation part of the end-effector pose with the values from the KDL rotation
+        ee_pose = np.eye(4)
+        for r in range(3):
             for c in range(3):
-                ee_pose[r, c] = rot_kdl[r, c]
+                ee_pose[r, c] = final_rot[r, c]
         
-        ee_pose[0, 3] = float(pos.x) - 0.15 # X offset
-        ee_pose[1, 3] = float(pos.y) - 0.15 # Y offset
-        ee_pose[2, 3] = float(pos.z) + 0.15 # Z height
+        ee_pose[0, 3] = float(pos.x) + offset[3]
+        ee_pose[1, 3] = float(pos.y) + offset[4]
+        ee_pose[2, 3] = float(pos.z) + offset[5] 
 
         try:
-            qout = self.ik_solver.ik(ee_pose, qinit=seed_state) # Call the IK solver with the desired end-effector pose and the seed state
+            qout = self.ik_solver.ik(ee_pose, qinit=seed_state)
 
             if qout is not None:
-                self.get_logger().info("✅ IK Solution Found!")
                 return qout.tolist()
             else:
-                self.get_logger().error("❌ IK Solver Failed: No solution found")
+                self.get_logger().error("❌ IK Failed: Check if 0.3m offset is within reach")
                 return None
             
         except Exception as e:
-            self.get_logger().error(f"❌ IK Solver Crash: {str(e)}")
+            self.get_logger().error(f"❌ IK Solver Error: {str(e)}")
             return None
         
     async def search_for_object(self):
@@ -182,9 +175,9 @@ class MovementCoordinator(Node):
         """
 
         self.get_logger().info("🔍 Starting Sweep")
-        for idx, pose in enumerate(self.search_viewpoints):
+        for _, pose in enumerate(self.search_viewpoints):
             await self.move_to_viewpoint(pose)
-            self.cmd_pub.publish(String(data="SNAP"))
+            # self.cmd_pub.publish(String(data="SNAP"))
             await asyncio.sleep(2.0) # Give vision time to process
             if self.object_found:
                 break
@@ -214,15 +207,39 @@ class MovementCoordinator(Node):
                     await asyncio.sleep(0.1)
             else:
                 await asyncio.sleep(0.5)
-        await asyncio.sleep(1.0) 
+        await asyncio.sleep(1.0)
+
 
     async def run_scan_pattern(self):
-        found = await self.search_for_object()
-        if found:
-            pose = self.InverseKinematics()
-            if pose:
-                await self.move_to_viewpoint(pose)
 
+        """
+        This is the main function that runs the scan pattern. It first calls the search_for_object function to execute the predefined search pattern.
+        If the object is found, it then calls the InverseKinematics function to compute the joint configuration needed to look at the object from the left side.
+        If the IK solution is valid, it commands the robot to move to that configuration using the move_to_viewpoint function.
+        """
+
+        found = await self.search_for_object()
+
+        view_offset = {
+            # "front" : [0, -1.800, 0, -0.3, 0.0, 0.10],
+            "left" : [1.5708, 0, 0, 0.0, 0.35, 0.30],
+            "top" : [0, -1.5708, 0, 0.0, 0, 0.45],
+            "right" : [-1.5708, 0, 0, 0.0, -0.35, 0.10],
+        }
+
+        if found:
+            
+            for view, offset in view_offset.items():
+
+                self.get_logger().info(f"🔍 Attempting {view} side view")
+                pose = self.InverseKinematics(offset)
+
+                if pose:
+                    await self.move_to_viewpoint(pose)
+                    self.waiting_for_vision = True
+                    self.cmd_pub.publish(String(data="SNAP"))
+
+            self.cmd_pub.publish(String(data="SOLVE"))
 
 # --- Main Function ---
 
