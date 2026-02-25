@@ -42,7 +42,7 @@ class MovementCoordinator(Node):
         # -- ROS Subscribers --
         self.joint_sub = self.create_subscription(JointState, '/joint_states', self.joint_states_cb, 10)
         self.status_sub = self.create_subscription(String, '/fusion/status', self.status_cb, 10)
-        self.object_pose_sub = self.create_subscription(PoseWithCovarianceStamped, '/object/pose_raw', self.object_pose_cb, 10)
+        self.pose_sub_sweep = self.create_subscription(PoseWithCovarianceStamped, '/object/pose_raw_sweep', self.sweep_cb, 10)
 
         # -- Robot Joints --
         self.panda_joints = [
@@ -52,9 +52,9 @@ class MovementCoordinator(Node):
 
         # -- Search Viewpoints (Predefined Joint Configurations) --
         self.search_viewpoints = [
-            [1.551, -0.696, -0.203, -1.076, 0.016, 1.002, 0.579],
-            [-0.016, -0.696, -0.203, -1.076, 0.016, 1.002, 0.579],
-            [-1.519, -0.696, -0.203, -1.076, 0.016, 1.002, 0.579],
+            [1.551, -0.696, -0.203, -1.076, 0.016, 0.802, 0.579],
+            [-0.016, -0.696, -0.203, -1.076, 0.016, 0.802, 0.579],
+            [-1.519, -0.696, -0.203, -1.076, 0.016, 0.802, 0.579],
         ]
 
         # -- TRAC-IK Setup --
@@ -97,16 +97,12 @@ class MovementCoordinator(Node):
             self.object_found = True
             self.waiting_for_vision = False
 
-    def object_pose_cb(self, msg):
-
-        """
-        This callback is triggered when the Vision Node publishes the detected object's pose.
-        We store the pose in self.found_pose and set self.object_found to True, which signals that we can proceed with IK and movement.
-        """
+    
+    def sweep_cb(self, msg):
 
         self.found_pose = msg.pose.pose
         self.object_found = True
-        self.get_logger().info(f"📍 Target Pose Received")
+
     
     def InitializeTRACIK(self):
         
@@ -131,26 +127,29 @@ class MovementCoordinator(Node):
 
         """
         This function computes the inverse kinematics for the detected object's pose using the TRAC-IK solver.
-        It constructs a desired end-effector pose that looks at the object from the left side (+Y direction) and is pitched up 90 degrees to look down at the object.
+        It constructs a desired end-effector pose that looks at the object from the specified side with optional gripper rotation.
         """
 
         if self.found_pose is None:
             return None
 
-
         seed_state = self.current_joints if self.current_joints is not None else np.zeros(7)
         pos = self.found_pose.position
 
         final_rot = PyKDL.Rotation.EulerZYX(offset[0], offset[1], offset[2])
+        
+        if len(offset) > 6 and offset[6] != 0:
+            gripper_rot = PyKDL.Rotation.RotX(offset[6])
+            final_rot = final_rot * gripper_rot
 
         ee_pose = np.eye(4)
         for r in range(3):
             for c in range(3):
                 ee_pose[r, c] = final_rot[r, c]
-        
+
         ee_pose[0, 3] = float(pos.x) + offset[3]
-        ee_pose[1, 3] = float(pos.y) + offset[4]
-        ee_pose[2, 3] = float(pos.z) + offset[5] 
+        ee_pose[1, 3] = float(pos.y) + offset[4] 
+        ee_pose[2, 3] = float(pos.z) + offset[5]
 
         try:
             qout = self.ik_solver.ik(ee_pose, qinit=seed_state)
@@ -158,7 +157,7 @@ class MovementCoordinator(Node):
             if qout is not None:
                 return qout.tolist()
             else:
-                self.get_logger().error("❌ IK Failed: Check if 0.3m offset is within reach")
+                self.get_logger().error("❌ IK Failed: Check if offset is within reach")
                 return None
             
         except Exception as e:
@@ -177,9 +176,10 @@ class MovementCoordinator(Node):
         self.get_logger().info("🔍 Starting Sweep")
         for _, pose in enumerate(self.search_viewpoints):
             await self.move_to_viewpoint(pose)
-            # self.cmd_pub.publish(String(data="SNAP"))
+            self.cmd_pub.publish(String(data="SWEEP_SNAP"))
             await asyncio.sleep(2.0) # Give vision time to process
             if self.object_found:
+                self.get_logger().info(f"📍 Target Pose Received")
                 break
         return self.object_found
 
@@ -221,11 +221,16 @@ class MovementCoordinator(Node):
         found = await self.search_for_object()
 
         view_offset = {
-            # "front" : [0, -1.800, 0, -0.3, 0.0, 0.10],
-            "left" : [1.5708, 0, 0, 0.0, 0.35, 0.30],
-            "top" : [0, -1.5708, 0, 0.0, 0, 0.45],
-            "right" : [-1.5708, 0, 0, 0.0, -0.35, 0.10],
+            "back-high":    [np.pi,   -np.pi/4,  0, -0.25, 0.0,   0.35, 0.0],
+            "left-high":    [np.pi/2, -np.pi/4,  0, 0.0,   0.25,  0.35, 0.0],
+            "left"  : [1.5708, 0, 0, 0.0, 0.45, 0.10, 0.65],
+            "front-high":   [0.0,     -np.pi/4,  0, 0.25,  0.0,   0.45, 0.0],
+            "top"   : [0, -1.5708, 0, 0.0, 0.0, 0.45, 0],
+            "right-high":   [-np.pi/2,-np.pi/4,  0, 0.0,  -0.25,  0.35, 0.0],
+            "right" : [-1.5708, 0, 0, 0.0, -0.45, 0.10, 0.65],
         }
+
+        safe_overhead = [0.0, -0.696, 0.0, -1.5, 0.0, 1.5, 0.7]
 
         if found:
             
@@ -236,8 +241,12 @@ class MovementCoordinator(Node):
 
                 if pose:
                     await self.move_to_viewpoint(pose)
+                    self.object_found = False
                     self.waiting_for_vision = True
                     self.cmd_pub.publish(String(data="SNAP"))
+                    # while not self.object_found and rclpy.ok():
+                    #     await asyncio.sleep(0.1)
+                    await self.move_to_viewpoint(safe_overhead)
 
             self.cmd_pub.publish(String(data="SOLVE"))
 
