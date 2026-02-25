@@ -1,4 +1,7 @@
+from glob import glob
+
 from setuptools import find_packages, setup
+import os
 
 package_name = 'multi_view_pkg'
 
@@ -10,7 +13,12 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
+
+        # --- ADD THESE TWO LINES ---
+        (os.path.join('share', package_name, 'config'), glob('config/*.yaml')),
+        (os.path.join('share', package_name, 'launch'), glob('launch/*.py')),
     ],
+
     install_requires=['setuptools'],
     zip_safe=True,
     maintainer='Affan Mohammed',
@@ -24,13 +32,17 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'vision = multi_view_pkg.vision_node:main',
-            'movement = multi_view_pkg.movement_node:main',
             'fusion = multi_view_pkg.fusion_node:main',
-            'vision2 = multi_view_pkg.vision_node_2:main',
+            'fusion2 = multi_view_pkg.fusion_node_2:main',
+            'fusion3 = multi_view_pkg.fusion_node_3:main',
+            'movement = multi_view_pkg.movement_node:main',
             'movement2 = multi_view_pkg.movement_node_2:main',
             'movement3 = multi_view_pkg.movement_node_3:main',
-            'fusion2 = multi_view_pkg.fusion_node_2:main',
+            'movement4 = multi_view_pkg.movement_node_4:main',
+            'vision = multi_view_pkg.vision_node:main',
+            'vision2 = multi_view_pkg.vision_node_2:main',
+            'vision3 = multi_view_pkg.vision_node_3:main',
+            'vision4 = multi_view_pkg.vision_node_4:main',
         ],
     },
 )
