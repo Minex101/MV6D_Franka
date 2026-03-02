@@ -25,7 +25,8 @@ setup(
     entry_points={
         'console_scripts': [
             'poseacctest = test_scripts_pkg.PoseAccuracy:main',
-            'oriacctest = test_scripts_pkg.OrientationAccuracy:main'
+            'oriacctest = test_scripts_pkg.OrientationAccuracy:main',
+            'modelcompare = test_scripts_pkg.ModelCompare:main'
         ],
     },
 )

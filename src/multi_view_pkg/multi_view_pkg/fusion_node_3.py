@@ -74,9 +74,14 @@ class FusionNode(Node):
         Calculate the average position and orientation from buffered poses and publish the fused result.
         """
 
-        avg_pos = np.mean(self.position, axis=0) # Average Position
-        
-        avg_ori = self.average_quarternions_markley(self.orientation) # Average Orientation using Markley's method
+        positions = np.array(self.position)
+
+        # ---- Median ----
+        avg_pos = np.median(positions, axis=0)
+
+        # ---- Outlier Rejection + Markley ----
+        filtered_quats = self.filter_quaternion_outliers(self.orientation, threshold_deg=20)
+        avg_ori = self.average_quarternions_markley(filtered_quats)
 
         self.get_logger().warn(f"🛡️ Fused Pos: {avg_pos}")
         self.get_logger().warn(f"🛡️ Fused Ori: {avg_ori}")
@@ -99,6 +104,35 @@ class FusionNode(Node):
 
         self.position = [] # Clear buffers after publishing
         self.orientation = []
+
+    def filter_quaternion_outliers(self, quaternions, threshold_deg=20):
+
+        """
+        Filter quaternion outliers based on angular distance from preliminary Markley average.
+        """
+
+        Q = np.array(quaternions)
+
+        # Preliminary Markley average
+        M = np.dot(Q.T, Q)
+        M /= len(Q)
+        eigenvalues, eigenvectors = np.linalg.eigh(M)
+        avg_q = eigenvectors[:, np.argmax(eigenvalues)]
+        avg_q /= np.linalg.norm(avg_q)
+
+        # Angular distance computation
+        dots = np.abs(np.dot(Q, avg_q))
+        angles = 2 * np.arccos(np.clip(dots, -1.0, 1.0))
+        angles_deg = np.degrees(angles)
+
+        # Inlier selection
+        inliers = Q[angles_deg < threshold_deg]
+
+        # Fallback if all rejected
+        if len(inliers) == 0:
+            return Q
+
+        return inliers
 
     def average_quarternions_markley(self, quaternions):
 
