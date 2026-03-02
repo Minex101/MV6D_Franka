@@ -33,7 +33,7 @@ class PoseCollector_2(Node):
         self.sweep_snap_requested = False
         self.latest_depth = None
         self.intrinsic_matrix = None
-        self.depth_threshold = 0.06
+        self.depth_threshold = 10.0
 
         self.get_logger().info('👁️ Vision Node: One-Shot Mode (5x5 Median Patch Active)')
 

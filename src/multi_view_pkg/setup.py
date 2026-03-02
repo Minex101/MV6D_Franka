@@ -35,6 +35,7 @@ setup(
             'fusion = multi_view_pkg.fusion_node:main',
             'fusion2 = multi_view_pkg.fusion_node_2:main',
             'fusion3 = multi_view_pkg.fusion_node_3:main',
+            'fusion4 = multi_view_pkg.fusion_node_4:main',
             'movement = multi_view_pkg.movement_node:main',
             'movement2 = multi_view_pkg.movement_node_2:main',
             'movement3 = multi_view_pkg.movement_node_3:main',

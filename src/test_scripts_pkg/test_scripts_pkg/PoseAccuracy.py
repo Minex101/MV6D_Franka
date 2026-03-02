@@ -1,96 +1,160 @@
-"""
-A simple ROS2 implementation to get the precision and accuracy of position estimates (X, Y, Z) and fused poses
-compared to ground truth. 
-"""
-
 import rclpy
 from rclpy.node import Node
-
 from geometry_msgs.msg import PoseWithCovarianceStamped
-
+import numpy as np
 import matplotlib.pyplot as plt
 
 class PrecisionAccuracyTester(Node):
     def __init__(self):
         super().__init__('precision_accuracy_tester')
 
-        # Subscribe to raw poses from Vision Node
-        self.poses = self.create_subscription(PoseWithCovarianceStamped, 
-                                                     '/object/pose_raw', 
-                                                     self.pose_callback, 
-                                                     10)
-        
-        # Subscribe to fused poses from Fusion Node
-        self.fused_poses = self.create_subscription(PoseWithCovarianceStamped,
-                                                     '/object/pose_fused',
-                                                     self.fused_pose_callback,
-                                                     10)
-        # Data storage
+        self.gt_t = np.array([0.43955, 0.00466, 0.0789])
+
+        self.create_subscription(
+            PoseWithCovarianceStamped,
+            '/object/pose_raw',
+            self.pose_callback,
+            10
+        )
+
+        self.create_subscription(
+            PoseWithCovarianceStamped,
+            '/object/pose_fused',
+            self.fused_pose_callback,
+            10
+        )
+
+        # Raw storage
         self.raw_X, self.raw_Y, self.raw_Z = [], [], []
-        self.fused_X, self.fused_Y, self.fused_Z = [], [], []
+        self.raw_trans_error = []
 
-        # Setup Matplotlib for live plotting
+        # Single fused pose storage
+        self.fused_pose = None
+        self.fused_trans_error = None
+
         plt.ion()
-        self.fig, (self.ax1, self.ax2) = plt.subplots(2, 1, figsize=(10, 10))
-
-        # Timer to plot results after a certain duration
+        self.fig, (self.ax1, self.ax2, self.ax3) = plt.subplots(3, 1, figsize=(10, 14))
         self.timer = self.create_timer(0.1, self.plot_results)
+        self.fig.subplots_adjust(
+            hspace=0.5   # vertical space between subplots
+        )
 
     def pose_callback(self, msg):
-        """Handle incoming raw poses for precision analysis."""
-        self.raw_X.append(msg.pose.pose.position.x)
-        self.raw_Y.append(msg.pose.pose.position.y)
-        self.raw_Z.append(msg.pose.pose.position.z)
+        px = msg.pose.pose.position.x
+        py = msg.pose.pose.position.y
+        pz = msg.pose.pose.position.z
+
+        self.raw_X.append(px)
+        self.raw_Y.append(py)
+        self.raw_Z.append(pz)
+
+        pred_pos = np.array([px, py, pz])
+        trans_error = np.linalg.norm(pred_pos - self.gt_t)
+        self.raw_trans_error.append(trans_error)
 
     def fused_pose_callback(self, msg):
-        """Handle incoming fused poses for accuracy analysis."""
-        self.fused_X.append(msg.pose.pose.position.x)
-        self.fused_Y.append(msg.pose.pose.position.y)
-        self.fused_Z.append(msg.pose.pose.position.z)
-    
-    def plot_results(self):
-        """Plot the precision and accuracy results."""
+        px = msg.pose.pose.position.x
+        py = msg.pose.pose.position.y
+        pz = msg.pose.pose.position.z
 
-        # Clear axes to redraw
+        self.fused_pose = np.array([px, py, pz])
+        self.fused_trans_error = np.linalg.norm(self.fused_pose - self.gt_t)
+
+        self.get_logger().info(f"Fused translation error: {self.fused_trans_error:.6f} m")
+
+    def plot_results(self):
         self.ax1.clear()
         self.ax2.clear()
+        self.ax3.clear()
 
-        # Subplot 1: X - Y Position
+        # --- X-Y scatter ---
+        if len(self.raw_X) > 0:
+            self.ax1.scatter(self.raw_X, self.raw_Y,
+                 c="#D55E00", alpha=0.7,
+                 edgecolors="black", linewidths=0.8,
+                 marker='o', label="Raw (X-Y)")
 
-        # Raw Positions
-        self.ax1.scatter(self.raw_X, self.raw_Y, c="red", label='Raw Pose Estimates', alpha=0.5)
-        # Fused Positions
-        if self.fused_X and self.fused_Y:
-            self.ax1.scatter(self.fused_X, self.fused_Y, c="blue", label='Fused Pose Estimate', alpha=0.8)
-        # Ground truth
-        self.ax1.scatter([0.4314], [0.0], c="green", label='Ground Truth', s=100, marker='x')
-        self.ax1.set_title('X-Y Position Precision and Accuracy')
-        self.ax1.set_xlabel('X Position (m)')
-        self.ax1.set_ylabel('Y Position (m)')
+        if self.fused_pose is not None:
+            self.ax1.scatter(self.fused_pose[0], self.fused_pose[1],
+                 c="#0072B2", alpha=0.9,
+                 edgecolors="black", linewidths=1.0,
+                 marker='X', s=100, label="Fused (X-Y)")
+
+        self.ax1.scatter(self.gt_t[0], self.gt_t[1],
+                 c="#009E73", alpha=1.0,
+                 edgecolors="black", linewidths=1.0,
+                 marker='X', s=120, label="Ground Truth (X-Y)")
+
+        self.ax1.set_title("X-Y Position")
+        self.ax1.set_xlabel("X (meters)")
+        self.ax1.set_ylabel("Y (meters)")
         self.ax1.legend()
         self.ax1.grid(True)
 
-        # Subplot 2: Z Position
+        # --- Z plot ---
+        if len(self.raw_Z) > 0:
+            self.ax2.plot(self.raw_Z,
+              color="#D55E00", linestyle='--',
+              alpha=0.7, linewidth=1.5, label="Raw Z")
+
+        if self.fused_pose is not None:
+            self.ax2.axhline(self.fused_pose[2],
+                 color="#0072B2", linestyle='-',
+                 linewidth=2, label="Fused Z")
+
         
-        indices = range(len(self.raw_Z))
-        # Raw Z positions
-        self.ax2.plot(indices, self.raw_Z, c="red", linestyle='--', label='Raw Pose z', alpha=0.4)
-        # scatter raw Z points
-        self.ax2.scatter(indices, self.raw_Z, c='red', s=10)
-        # Fused Z positions
-        # Draw a horizontal line for the final fused Z
-        if self.fused_Z:
-            self.ax2.axhline(y=self.fused_Z[-1], color='blue', linestyle='-', label='Fused Pose Z')
-        # Ground Truth Z line
-        self.ax2.axhline(y=0.067005, color='green', linestyle='-', label='Ground Truth Z')
-        self.ax2.set_title("Z Position Precision and Accuracy")
-        self.ax2.set_xlabel("Snapshot Number")
+        self.ax2.axhline(self.gt_t[2],
+                        color="#009E73", linestyle='-',
+                        linewidth=2, label="GT Z")
+
+        self.ax2.set_title("Depth (Z) Accuracy Plot")
+        self.ax2.set_xlabel("")
         self.ax2.set_ylabel("Z (meters)")
         self.ax2.legend()
         self.ax2.grid(True)
 
+        # --- Translation Error ---
+        if len(self.raw_trans_error) > 0:
+            self.ax3.plot(
+            self.raw_trans_error,
+            color="#D55E00",        # muted crimson for raw
+            linestyle='--',
+            alpha=0.7,
+            linewidth=1.5,
+            marker='o',
+            markersize=5,
+            markeredgecolor='black',  # black edge for markers
+            markerfacecolor="#D55E00",
+            label="Raw Euclidean Error"
+        )
+
+        if self.fused_trans_error is not None:
+            if self.fused_trans_error is not None:
+                self.ax3.axhline(
+                    self.fused_trans_error,
+                    color="#0072B2",       # dark navy for fused
+                    linestyle='-',
+                    linewidth=2,
+                    label="Fused Euclidean Error"
+                )
+        
+        self.ax3.axhline(
+            0,
+            color="#009E73",           # dark green
+            linestyle='-.',
+            linewidth=1.5,
+            label="Zero Error Reference"
+        )
+
+        self.ax3.set_title("Euclidean Translation Error Over Frames")
+        self.ax3.set_xlabel("Frame Index")
+        self.ax3.set_ylabel("Error (meters)")
+        self.ax3.legend()
+        self.ax3.grid(True)
+
         plt.draw()
         plt.pause(0.1)
+
 
 def main(args=None):
     rclpy.init(args=args)
@@ -101,6 +165,7 @@ def main(args=None):
         pass
     node.destroy_node()
     rclpy.shutdown()
+
 
 if __name__ == '__main__':
     main()

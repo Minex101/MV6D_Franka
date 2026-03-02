@@ -58,8 +58,8 @@ class PoseCollector(Node):
                     q = transformed_pose.pose.orientation
 
                     self.get_logger().info(
-                        f'Pos: ({p.x:.2f}, {p.y:.2f}, {p.z:.2f}) | '
-                        f'Ori: (x={q.x:.2f}, y={q.y:.2f}, z={q.z:.2f}, w={q.w:.2f})'
+                        f'Pos: ({p.x:.4f}, {p.y:.4f}, {p.z:.4f}) | '
+                        f'Ori: (x={q.x:.4f}, y={q.y:.4f}, z={q.z:.4f}, w={q.w:.4f})'
 )
                     # 1. Initialize the message
                     fusion_msg = PoseWithCovarianceStamped()
