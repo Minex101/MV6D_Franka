@@ -34,8 +34,10 @@ class PoseCollector_2(Node):
         self.latest_depth = None
         self.intrinsic_matrix = None
         self.depth_threshold = 10.0
+        self.uncertainty_threshold = 0.9  # reject views with normalised depth variance above this
+        self.view_count = 0
 
-        self.get_logger().info('👁️ Vision Node: One-Shot Mode (5x5 Median Patch Active)')
+        self.get_logger().info('👁️ Vision Node: One-Shot Mode (Depth Variance Uncertainty Active)')
 
     def info_cb(self, msg):
         self.intrinsic_matrix = np.array(msg.k).reshape(3, 3)
@@ -48,44 +50,56 @@ class PoseCollector_2(Node):
             self.get_logger().info("📸 SNAP requested")
             self.sweep_snap_requested = False
             self.snap_requested = True
+
         elif msg.data == "SWEEP_SNAP":
             self.get_logger().info("📸 SWEEP SNAP requested")
             self.snap_requested = False
             self.sweep_snap_requested = True
 
+        elif msg.data == "CANCEL":
+            self.snap_requested = False
+            self.sweep_snap_requested = False
+            self.get_logger().warn("🚫 Snap cancelled")
+
     def verify_depth(self, p):
         if self.latest_depth is None or self.intrinsic_matrix is None:
             return False, 0.0
-        
+
         z_ai = p.z
         point_3d = np.array([p.x, p.y, p.z])
         pixel_coords = self.intrinsic_matrix @ point_3d
-        
+
         if pixel_coords[2] == 0: return False, 0.0
-        
+
         u_c = int(pixel_coords[0] / pixel_coords[2])
         v_c = int(pixel_coords[1] / pixel_coords[2])
-        
+
         h, w = self.latest_depth.shape
 
         # Define 5x5 window boundaries
-        half_win = 2 
+        half_win = 2
         u_min, u_max = max(0, u_c - half_win), min(w, u_c + half_win + 1)
         v_min, v_max = max(0, v_c - half_win), min(h, v_c + half_win + 1)
-        
+
         # Extract patch and filter invalid pixels
         depth_patch = self.latest_depth[v_min:v_max, u_min:u_max]
         valid_depths = depth_patch[~np.isnan(depth_patch) & (depth_patch > 0)]
-        
+
         if valid_depths.size == 0:
             return False, 0.0
-            
+
         # 5x5 Median logic
         z_sensor = np.median(valid_depths)
-        
+
+        # Depth variance uncertainty — high variance = clutter/occlusion = unreliable view
+        depth_mean = np.mean(valid_depths)
+        uncertainty = np.std(valid_depths) / (depth_mean + 1e-6)  # normalised coefficient of variation
+
+        self.score_pub.publish(Float32(data=float(uncertainty)))
+
         residual = abs(z_ai - z_sensor)
-        self.score_pub.publish(Float32(data=float(residual)))
-        return (residual < self.depth_threshold), residual
+        is_valid = (residual < self.depth_threshold) and (uncertainty < self.uncertainty_threshold)
+        return is_valid, uncertainty
 
     def detections_callback(self, msg):
         if not (self.snap_requested or self.sweep_snap_requested) or not msg.detections:
@@ -98,35 +112,35 @@ class PoseCollector_2(Node):
 
         if self.snap_requested:
             self.snap_requested = False
-            is_valid, residual = self.verify_depth(pos)
-            
+            is_valid, uncertainty = self.verify_depth(pos)
+
             if not is_valid:
-                self.get_logger().warn(f"🚫 View Rejected: {residual:.4f}m")
+                self.get_logger().warn(f"🚫 View Rejected: uncertainty={uncertainty:.4f}")
                 self.status_pub.publish(String(data="INSTABILITY_DETECTED"))
                 return
-            
-            self.process_and_publish(res, header, False, residual)
+
+            self.process_and_publish(res, header, False, uncertainty)
 
         elif self.sweep_snap_requested:
             self.sweep_snap_requested = False
             self.process_and_publish(res, header, True)
 
-    def process_and_publish(self, result, header, is_sweep, residual=0.05):
+    def process_and_publish(self, result, header, is_sweep, uncertainty=0.05):
         try:
             pose_stamped = PoseStamped()
             pose_stamped.header = header
             pose_stamped.pose = result.pose.pose
 
             transformed_pose = self.tf_buffer.transform(
-                pose_stamped, self.target_frame, 
+                pose_stamped, self.target_frame,
                 timeout=rclpy.duration.Duration(seconds=0.1)
             )
-            
+
             fusion_msg = PoseWithCovarianceStamped()
             fusion_msg.header = transformed_pose.header
             fusion_msg.pose.pose = transformed_pose.pose
-            pos_var = max(float(residual)**2, 0.0001)
-    
+            pos_var = max(float(uncertainty) * 0.1, 0.0001)  # scale uncertainty, don't square
+
             rot_var = 0.01
 
             cov = [0.0] * 36
@@ -136,7 +150,7 @@ class PoseCollector_2(Node):
             cov[21] = rot_var # roll
             cov[28] = rot_var # pitch
             cov[35] = rot_var # yaw
-            
+
             fusion_msg.pose.covariance = cov
 
             if is_sweep:
@@ -145,7 +159,16 @@ class PoseCollector_2(Node):
                 self.pose_pub.publish(fusion_msg)
 
             self.status_pub.publish(String(data="SUCCESS"))
-            self.get_logger().info(f'✅ Pose Published')
+
+            if not is_sweep:
+                self.view_count += 1
+                p = transformed_pose.pose.position
+                o = transformed_pose.pose.orientation
+                self.get_logger().info(f'✅ Pose Published')
+                self.get_logger().warn(f"👁️ View {self.view_count} | Pos: [{p.x:.4f}, {p.y:.4f}, {p.z:.4f}] | Ori (XYZW): [{o.x:.4f}, {o.y:.4f}, {o.z:.4f}, {o.w:.4f}]")
+            else:
+                self.get_logger().info(f'✅ Pose Published')
+
         except Exception as e:
             self.get_logger().error(f"❌ TF Error: {e}")
             self.status_pub.publish(String(data="INSTABILITY_DETECTED"))

@@ -8,7 +8,7 @@ class PrecisionAccuracyTester(Node):
     def __init__(self):
         super().__init__('precision_accuracy_tester')
 
-        self.gt_t = np.array([0.43955, 0.00466, 0.0789])
+        self.gt_t = np.array([0.36919, 0.30273, 0.03045])
 
         self.create_subscription(
             PoseWithCovarianceStamped,
