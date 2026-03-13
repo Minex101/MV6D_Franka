@@ -44,7 +44,7 @@ class FusionNode(Node):
         self.position = []
         self.orientation = []
         self.residuals = []  # per-view residuals
-        self.depth_threshold = 0.6  # maximum expected residual (m), adjust for your sensor
+        self.depth_threshold = 0.005  # maximum expected normalised depth variance (0.0-1.0)
 
     def store_pose_callback(self, msg):
 
@@ -99,24 +99,29 @@ class FusionNode(Node):
         quats = np.array(self.orientation)
         residuals = np.array(self.residuals)
 
-        # ---- Convert residuals to weights (low residual = high weight) ----
-        weights = np.clip(1.0 - residuals / self.depth_threshold, 0.0, 1.0)
+        # Convert residuals to weights (low residual = high weight)
+        weights = np.exp(-residuals / (self.depth_threshold + 1e-6))
+        print(f"Raw weights: {weights}")
         if np.sum(weights) == 0:
             self.get_logger().warn("⚠️ All residuals exceed threshold, using uniform weights")
             weights = np.ones_like(weights)
         weights /= np.sum(weights)  # normalize
 
-        # ---- Weighted Translation Average ----
-        avg_pos = np.average(positions, axis=0, weights=weights)
-
         # ---- Outlier Rejection ----
-        distances = np.linalg.norm(positions - avg_pos, axis=1)
-        inlier_mask = distances < 0.15  # reject poses > 15cm from weighted mean
-        if np.sum(inlier_mask) > 0:
-            avg_pos = np.average(positions[inlier_mask], axis=0, weights=weights[inlier_mask])
+        median_pos = np.median(positions, axis=0)
+        distances = np.linalg.norm(positions - median_pos, axis=1)
+        inlier_mask = distances < 0.15  # reject poses > 15cm from median
+        min_views = max(1, len(positions) // 2 + 1) 
+        if np.sum(inlier_mask) >= min_views:
+            positions = positions[inlier_mask]
             quats = quats[inlier_mask]
             weights = weights[inlier_mask]
             weights /= np.sum(weights)  # renormalize
+        else:
+            self.get_logger().warn("⚠️ Outlier rejection skipped: would remove too many views, using all")
+
+        # ---- Weighted Translation Average ----
+        avg_pos = np.average(positions, axis=0, weights=weights)
 
         # ---- Weighted Chordal L2 Quaternion Fusion ----
         M = np.zeros((4,4))

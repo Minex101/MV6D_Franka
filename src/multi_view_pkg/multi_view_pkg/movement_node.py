@@ -76,7 +76,7 @@ class MovementCoordinator(Node):
 
         # Wait for physical arrival
         while not arrived and rclpy.ok():
-            self.joint_pub.publish(msg) # Active holding
+            self.joint_pub.publish(msg)
             
             if self.current_joints is not None:
                 error = np.max(np.abs(self.current_joints - target))

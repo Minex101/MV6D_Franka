@@ -128,12 +128,11 @@ class PoseCollector_2(Node):
                         return
                         
                     except Exception as e:
-                        # ✅ ADD DETAILED LOGGING
                         self.get_logger().warn(
                             f"⚠️ Transform failed (will retry): "
                             f"from '{detection_header.frame_id}' to '{self.target_frame}' - {e}"
                         )
-                        continue  # Try next detection
+                        continue 
 
 
 
