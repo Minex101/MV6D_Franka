@@ -36,7 +36,7 @@ The system is divided into three functional nodes to ensure modularity and real-
 ```bash
 mkdir -p ~/ros2_ws/src
 cd ~/ros2_ws/src
-git clone [https://github.com/YOUR_USERNAME/multi_view_pkg.git](https://github.com/YOUR_USERNAME/multi_view_pkg.git)
+git clone https://github.com/Minex101/MV6D_Franka.git
 ```
 
 2. Install Python Dependencies
