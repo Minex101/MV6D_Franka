@@ -1,80 +1,103 @@
-University of Leeds
-
-Project: Multi-View Pose Estimation with Franka Panda for picking and packing in Warehouses
+Multi-View 6D Pose Estimation for Autonomous Warehouse Logistics
+BEng Mechatronics and Robotics (Industrial) | University of Leeds
 
 Author: Affan Ahmed Khan Mohammed
 
 Student ID: 201621240
 
-Course: BEng Mechatronics and Robotics (Industrial)
+Tools: NVIDIA Isaac Sim, ROS 2, NVIDIA DOPE
+📌 Project Overview
 
----
+This project develops a Multi-View 6D Pose Estimation system optimized for robotic pick-and-pack operations in warehouse environments.
 
-📌 **Project Overview**
+Standard single-view perception often struggles with occlusions and sensor noise. This system leverages a Franka Panda robot arm within NVIDIA Isaac Sim to capture an object (e.g., a Ketchup bottle) from multiple strategic viewpoints. The data is then processed through a fusion pipeline to refine pose accuracy and minimize spatial uncertainty.
+🚀 Key Features
 
-This project implements a Multi-View 6D Pose Estimation system designed for warehouse pick-and-pack operations. By utilizing a Franka Panda robot arm in NVIDIA Isaac Sim, the system captures the target object (Ketchup bottle) from multiple strategic viewpoints to refine pose accuracy and reduce uncertainty using a Kalman Filter-based fusion approach.
+    Deep Perception: Real-time 6D pose estimation using NVIDIA DOPE (Deep Object Pose Estimation).
 
-Key Components:
+    Simulation-First Workflow: High-fidelity physics and photorealistic rendering in NVIDIA Isaac Sim 5.1.0.
 
-    Simulation: NVIDIA Isaac Sim 5.1.0
+    Modular ROS 2 Architecture: Containerized nodes (Humble/Jazzy) for vision, motion control, and data fusion.
 
-    Vision Core: NVIDIA Deep Object Pose Estimation (DOPE)
+    Multi-View Strategy: Automated trajectory coordination to observe objects from four optimal orbits.
 
-    Middleware: ROS 2 Humble / Jazzy (Containerized)
+🏗 System Architecture
 
----
-
-🏗 **System Architecture**
-
-The system is divided into three functional nodes to ensure modularity and real-time performance:
-
+The system utilizes a decentralized node architecture to ensure low-latency communication and modular testing.
 1. Vision Node (Deep Perception)
 
-Uses the NVIDIA DOPE model to detect the object and estimate its 6D pose from the robot's end-effector camera.
+Performs deep learning inference to extract 6D poses from the end-effector camera stream.
 
-    Input: RGB-D camera stream from Isaac Sim.
+    Inference Engine: TensorRT/ONNX.
 
-    Process: Deep Learning inference using an ONNX/TensorRT engine.
+    Input: RGB-D data from Isaac Sim.
 
-    Output: PoseStamped messages for the detected object.
+    Output: geometry_msgs/PoseStamped.
 
 2. Movement Node (Trajectory Coordinator)
 
-Manages the robot's "Multi-View" sequence. It moves the Franka Panda through four pre-defined viewpoints to observe the object from different angles, overcoming self-occlusion and sensor noise.
+The "Choreographer" of the robot arm. It executes a multi-view sequence to maximize information gain.
 
-    Control: Publishes JointState commands to /joint_command.
+    Control Type: Joint-space control via /joint_command.
 
-    Strategy: Strategic orbits around the workspace center.
+    Logic: Asynchronous coordination between motion and "Snap" commands.
 
-3. Fusion Node (Kalman Filter) [NOT DEVELOPED YET]
+3. Fusion Node (Kalman Filter)
 
-The "Brain" of the system. It subscribes to the noisy pose estimates from the Vision Node and fuses them over time.
+Status: In Development
+The system's "Brain," responsible for spatial filtering.
 
-    Process: Applies an Extended Kalman Filter (EKF) to merge multiple viewpoints.
+    Algorithm: Extended Kalman Filter (EKF).
 
-    Result: A stabilized, high-confidence 6D pose used for final grasping.
+    Function: Merges noisy pose estimates from multiple viewpoints into a singular, high-confidence grasping coordinate.
 
----
+🛠 Setup & Installation
+Prerequisites
 
-🛠 **Calibration Tools**
+    NVIDIA Isaac Sim 5.1.0
 
-1. Setup Franka Viewpoints
+    ROS 2 (Humble or Jazzy) (Docker/Containerized recommended)
 
-To find the optimal joint angles for your warehouse scene, use the joint_state_publisher_gui. Run this on your host machine (Humble):
+    NVIDIA GPU (With TensorRT support)
 
-ros2 run joint_state_publisher_gui joint_state_publisher_gui ~/Documents/isaacsim/franka.urdf --ros-args -r /joint_states:=/joint_command
+Installation
 
----
+    Clone the Repository:
+    Bash
 
-📚 **References**
+    mkdir -p ~/ros2_ws/src
+    cd ~/ros2_ws/src
+    git clone https://github.com/your-username/multi_view_pkg.git
 
-@inproceedings{tremblay2018corl:dope,
- author = {Jonathan Tremblay and Thang To and Balakumar Sundaralingam and Yu Xiang and Dieter Fox and Stan Birchfield},
- title = {Deep Object Pose Estimation for Semantic Robotic Grasping of Household Objects},
- booktitle = {Conference on Robot Learning (CoRL)},
- year = 2018
-}
----
+    Install Dependencies:
+    Bash
+
+    cd ~/ros2_ws
+    rosdep install --from-paths src --ignore-src -r -y
+
+    Build the Package:
+    Bash
+
+    colcon build --packages-select multi_view_pkg
+    source install/setup.bash
+
+🎮 Usage
+Launching the Full Pipeline
+
+To start the vision, movement, and fusion nodes simultaneously:
+Bash
+
+ros2 launch multi_view_pkg start_system.launch.py
+
+Calibrating Viewpoints
+
+To manually find optimal joint angles for specific warehouse layouts, use the Joint State GUI:
+Bash
+
+ros2 run joint_state_publisher_gui joint_state_publisher_gui [PATH_TO_URDF]/franka.urdf --ros-args -r /joint_states:=/joint_command
+
+📚 References
+Code snippet
 
 @inproceedings{tremblay2018dope,
   author    = {Tremblay, Jonathan and To, Thang and Sundaralingam, Balakumar and Xiang, Yu and Fox, Dieter and Birchfield, Stan},
@@ -82,5 +105,3 @@ ros2 run joint_state_publisher_gui joint_state_publisher_gui ~/Documents/isaacsi
   booktitle = {Conference on Robot Learning (CoRL)},
   year      = {2018}
 }
-
----
