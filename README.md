@@ -57,5 +57,5 @@ Launching the Full System
 To start the perception, movement, and fusion nodes simultaneously:
 ```Bash
 
-ros2 launch multi_view_pkg start_system.launch.py
+ros2 launch multi_view_pkg pipeline.launch.py
 ```
