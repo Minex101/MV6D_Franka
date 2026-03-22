@@ -13,7 +13,6 @@ class MovementCoordinator(Node):
     def __init__(self):
         super().__init__('movement_coordinator')
         
-        # Publishers & Subscribers
         self.joint_pub = self.create_publisher(JointState, '/joint_command', 10)
         self.cmd_pub = self.create_publisher(String, '/fusion/command', 10)
         self.joint_sub = self.create_subscription(JointState, '/joint_states', self.joint_states_cb, 10)
@@ -21,7 +20,6 @@ class MovementCoordinator(Node):
         self.pose_sub_sweep = self.create_subscription(PoseWithCovarianceStamped, '/object/pose_raw_sweep', self.sweep_cb, 10)
         self.uncertainty_sub = self.create_subscription(Float32, '/robot/depth_residual', self.uncertainty_cb, 10)
 
-        # Robot Config
         self.panda_joints = ["panda_joint1", "panda_joint2", "panda_joint3", "panda_joint4", "panda_joint5", "panda_joint6", "panda_joint7"]   
         self.urdf_path = "/home/affan/Documents/FY_Project/isaac_sim_assets/franka.urdf"
         self.base_link = "World" 
@@ -29,7 +27,6 @@ class MovementCoordinator(Node):
         
         self.ik_solver = TracIKSolver(self.urdf_path, self.base_link, self.ee_link, timeout=0.20, epsilon=1e-5, solve_type="Distance")
         
-        # State Variables
         self.object_found = False
         self.current_joints = None
         self.found_pose = None
@@ -60,10 +57,12 @@ class MovementCoordinator(Node):
         tx, ty, tz = self.found_pose.position.x, self.found_pose.position.y, self.found_pose.position.z
         cx, cy, cz = tx + dx, ty + dy, tz + dz
         
-
-        base_rot = PyKDL.Rotation.RotY(np.pi/divisor) 
+        if divisor == 0:
+            base_rot = PyKDL.Rotation()
+        else:
+            base_rot = PyKDL.Rotation.RotY(np.pi/divisor) 
+            
         tilt = PyKDL.Rotation.RotZ(pitch_rad)
-        
         final_rot = base_rot * tilt * PyKDL.Rotation.RotZ(np.pi) 
 
         ee_pose = np.eye(4)
@@ -77,12 +76,12 @@ class MovementCoordinator(Node):
         return qout.tolist() if qout is not None else None
 
     async def run_scan_pattern(self):
+        start_time = time.time()
         self.get_logger().info("🔍 Starting Search...")
+        
         found = await self.search_for_object()
         
         if found:
-            # We only define X, Y, Z offsets now. 
-            # The rotation is handled globally in calculate_ik_quaternion
             view_offsets = {
                 "FRONT":  [-0.30, 0.0, 0.40, 0, 3],
                 "TOP":    [0.0,  0.0, 0.45, 0, 2],
@@ -102,11 +101,18 @@ class MovementCoordinator(Node):
                     v_start = time.time()
                     while self.waiting_for_vision and (time.time() - v_start) < 5.0:
                         await asyncio.sleep(0.1)
+                    if self.waiting_for_vision:
+                                            self.get_logger().warn(f"❌ View {name} failed. Sending CANCEL.")
+                                            self.cmd_pub.publish(String(data="CANCEL"))
+                                            self.waiting_for_vision = False # Reset state for next view
                 else:
                     self.get_logger().warn(f"⚠️ IK failed for {name}")
 
             self.cmd_pub.publish(String(data="SOLVE"))
-            self.get_logger().info("🏁 Scan Complete.")
+            
+            end_time = time.time()
+            total_duration = end_time - start_time
+            self.get_logger().info(f"🏁 Scan Complete. Total Time: {total_duration:.2f} seconds")
         else:
             self.get_logger().error("❌ Object not found.")
 

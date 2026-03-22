@@ -5,9 +5,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import sys
 
-# -----------------------------
-# Unified IEEE / Dissertation Style
-# -----------------------------
 plt.rcParams.update({
     "axes.labelsize": 9,
     "axes.titlesize": 10,
@@ -16,7 +13,7 @@ plt.rcParams.update({
     "ytick.labelsize": 8,
 })
 
-GT = {"x": 0.7255, "y": 0.55576, "z": 0.303303, "w": 0.26975}
+GT = {"x": 0.70710678, "y": 0.0, "z": 0.70710678, "w": 0.0} # Set the known ground truth orientation here (x, y, z, w) format
 
 COLOURS = {
     "raw": "#D55E00",     
@@ -31,12 +28,12 @@ class OrientationTester(Node):
 
         self.raw = {"x": [], "y": [], "z": [], "w": []}
         self.fused = None
-        self.q_ref = None  # reference quaternion for sign alignment
+        self.q_ref = None
 
         self.create_subscription(PoseWithCovarianceStamped, '/object/pose_raw', self.raw_cb, 10)
         self.create_subscription(PoseWithCovarianceStamped, '/object/pose_fused', self.fused_cb, 10)
 
-        self.get_logger().info("Collecting orientation data... Ctrl+C to stop and plot.")
+        self.get_logger().info("Collecting data, press Ctrl+C to stop and generate report...")
 
     def _unpack(self, msg):
         o = msg.pose.pose.orientation
@@ -91,7 +88,7 @@ class OrientationTester(Node):
             
             ax.scatter(x_vals, y_vals, color=COLOURS["raw"], alpha=0.7, s=25, 
                        edgecolors="black", linewidths=0.6, marker='o', 
-                       label=f"Raw ($\mu$:{r_mean:.3f})")
+                       label=f"Raw ($\mu$: {r_mean:.3f})")
 
             if self.fused:
                 ax.axhline(self.fused[comp], color=COLOURS["fused"], linestyle='-', 
@@ -113,7 +110,7 @@ class OrientationTester(Node):
 
         ax_err.plot(x_err, raw_errs, color=COLOURS["raw"], marker='o', markersize=6, 
                     linestyle='-', linewidth=1.5, markeredgecolor='black',
-                    label=f"Raw Error ($\mu$:{e_mean:.2f}°)")
+                    label=f"Raw Error ($\mu$: {e_mean:.2f}°)")
 
         if self.fused:
             f_err = self.quat_error(self.fused)
