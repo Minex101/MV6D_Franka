@@ -89,7 +89,7 @@ class MovementCoordinator(Node):
                 await asyncio.sleep(0.5)
 
         self.get_logger().info("Arrived. Waiting 2 seconds for camera settle...")
-        await asyncio.sleep(2.0)
+        await asyncio.sleep(0.0)
 
         self.get_logger().info("Robot settled.")
 

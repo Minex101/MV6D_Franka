@@ -4,168 +4,130 @@ from geometry_msgs.msg import PoseWithCovarianceStamped
 import numpy as np
 import matplotlib.pyplot as plt
 
+# -----------------------------
+# Unified IEEE / Dissertation Style
+# -----------------------------
+plt.rcParams.update({
+    "axes.labelsize": 9,
+    "axes.titlesize": 10,
+    "legend.fontsize": 7,
+    "xtick.labelsize": 8,
+    "ytick.labelsize": 8,
+    "axes.spines.top": False,
+    "axes.spines.right": False,
+})
+
+COLOURS = {
+    "raw": "#D55E00",     
+    "fused": "#0072B2",   
+    "gt": "#009E73"       
+}
+
 class PrecisionAccuracyTester(Node):
     def __init__(self):
-        super().__init__('precision_accuracy_tester')
+        super().__init__('position_tester')
 
-        self.gt_t = np.array([0.36919, 0.30273, 0.03045])
+        # Ground Truth from Isaac Sim
+        self.gt_t = np.array([0.56047, -0.01202, 0.07074]) 
 
-        self.create_subscription(
-            PoseWithCovarianceStamped,
-            '/object/pose_raw',
-            self.pose_callback,
-            10
-        )
+        self.create_subscription(PoseWithCovarianceStamped, '/object/pose_raw', self.pose_callback, 10)
+        self.create_subscription(PoseWithCovarianceStamped, '/object/pose_fused', self.fused_pose_callback, 10)
 
-        self.create_subscription(
-            PoseWithCovarianceStamped,
-            '/object/pose_fused',
-            self.fused_pose_callback,
-            10
-        )
-
-        # Raw storage
         self.raw_X, self.raw_Y, self.raw_Z = [], [], []
         self.raw_trans_error = []
-
-        # Single fused pose storage
         self.fused_pose = None
         self.fused_trans_error = None
 
         plt.ion()
-        self.fig, (self.ax1, self.ax2, self.ax3) = plt.subplots(3, 1, figsize=(10, 14))
-        self.timer = self.create_timer(0.1, self.plot_results)
-        self.fig.subplots_adjust(
-            hspace=0.5   # vertical space between subplots
-        )
+        self.fig, (self.ax1, self.ax2, self.ax3) = plt.subplots(3, 1, figsize=(8, 10))
+        self.fig.canvas.manager.set_window_title('Translation Accuracy Report')
+        self.fig.subplots_adjust(hspace=0.6)
 
     def pose_callback(self, msg):
-        px = msg.pose.pose.position.x
-        py = msg.pose.pose.position.y
-        pz = msg.pose.pose.position.z
-
+        px, py, pz = msg.pose.pose.position.x, msg.pose.pose.position.y, msg.pose.pose.position.z
         self.raw_X.append(px)
         self.raw_Y.append(py)
         self.raw_Z.append(pz)
-
-        pred_pos = np.array([px, py, pz])
-        trans_error = np.linalg.norm(pred_pos - self.gt_t)
-        self.raw_trans_error.append(trans_error)
+        err = np.linalg.norm(np.array([px, py, pz]) - self.gt_t)
+        self.raw_trans_error.append(err)
 
     def fused_pose_callback(self, msg):
-        px = msg.pose.pose.position.x
-        py = msg.pose.pose.position.y
-        pz = msg.pose.pose.position.z
-
+        px, py, pz = msg.pose.pose.position.x, msg.pose.pose.position.y, msg.pose.pose.position.z
         self.fused_pose = np.array([px, py, pz])
         self.fused_trans_error = np.linalg.norm(self.fused_pose - self.gt_t)
 
-        self.get_logger().info(f"Fused translation error: {self.fused_trans_error:.6f} m")
+    def update_plot(self):
+        if not plt.fignum_exists(self.fig.number):
+            return
 
-    def plot_results(self):
-        self.ax1.clear()
-        self.ax2.clear()
-        self.ax3.clear()
+        for ax in [self.ax1, self.ax2, self.ax3]:
+            ax.clear()
+            ax.grid(True, linestyle='--', alpha=0.3)
 
-        # --- X-Y scatter ---
-        if len(self.raw_X) > 0:
-            self.ax1.scatter(self.raw_X, self.raw_Y,
-                 c="#D55E00", alpha=0.7,
-                 edgecolors="black", linewidths=0.8,
-                 marker='o', label="Raw (X-Y)")
+        m_x = np.mean(self.raw_X) if self.raw_X else 0
+        m_y = np.mean(self.raw_Y) if self.raw_Y else 0
+        m_z = np.mean(self.raw_Z) if self.raw_Z else 0
+        m_err = np.mean(self.raw_trans_error) if self.raw_trans_error else 0
 
-        if self.fused_pose is not None:
-            self.ax1.scatter(self.fused_pose[0], self.fused_pose[1],
-                 c="#0072B2", alpha=0.9,
-                 edgecolors="black", linewidths=1.0,
-                 marker='X', s=100, label="Fused (X-Y)")
-
-        self.ax1.scatter(self.gt_t[0], self.gt_t[1],
-                 c="#009E73", alpha=1.0,
-                 edgecolors="black", linewidths=1.0,
-                 marker='X', s=120, label="Ground Truth (X-Y)")
-
-        self.ax1.set_title("X-Y Position")
-        self.ax1.set_xlabel("X (meters)")
-        self.ax1.set_ylabel("Y (meters)")
-        self.ax1.legend()
-        self.ax1.grid(True)
-
-        # --- Z plot ---
-        if len(self.raw_Z) > 0:
-            self.ax2.plot(self.raw_Z,
-              color="#D55E00", linestyle='--',
-              alpha=0.7, linewidth=1.5, label="Raw Z")
-
-        if self.fused_pose is not None:
-            self.ax2.axhline(self.fused_pose[2],
-                 color="#0072B2", linestyle='-',
-                 linewidth=2, label="Fused Z")
-
+        if self.raw_X:
+            self.ax1.scatter(self.raw_X, self.raw_Y, color=COLOURS["raw"], alpha=0.7, s=25, 
+                            edgecolors="black", linewidths=0.6, label=f"Raw ($\mu_x$: {m_x:.3f}, $\mu_y$: {m_y:.3f})")
         
-        self.ax2.axhline(self.gt_t[2],
-                        color="#009E73", linestyle='-',
-                        linewidth=2, label="GT Z")
+        if self.fused_pose is not None:
+            self.ax1.scatter(self.fused_pose[0], self.fused_pose[1], color=COLOURS["fused"], 
+                            marker='X', s=60, edgecolors="black", label=f"Fused: ({self.fused_pose[0]:.3f}m, {self.fused_pose[1]:.3f}m)")
+        
+        self.ax1.scatter(self.gt_t[0], self.gt_t[1], color=COLOURS["gt"], 
+                        marker='*', s=60, edgecolors="black", label=f"GT: ({self.gt_t[0]:.3f}m, {self.gt_t[1]:.3f}m)")
+        
+        self.ax1.set_title("Lateral ($X$-$Y$ Plane) Convergence")
+        self.ax1.set_xlabel("X (m)")
+        self.ax1.set_ylabel("Y (m)")
+        self.ax1.legend(loc='lower left')
 
-        self.ax2.set_title("Depth (Z) Accuracy Plot")
-        self.ax2.set_xlabel("")
-        self.ax2.set_ylabel("Z (meters)")
-        self.ax2.legend()
-        self.ax2.grid(True)
+        if self.raw_Z:
+            self.ax2.plot(self.raw_Z, color=COLOURS["raw"], marker='o', markersize=4, alpha=0.4, linestyle='-', markeredgecolor='black', label=f"Raw Z ($\mu$: {m_z:.3f})")
+        
+        if self.fused_pose is not None:
+            self.ax2.axhline(self.fused_pose[2], color=COLOURS["fused"], linewidth=2, label=f"Fused Z: {self.fused_pose[2]:.3f}m")
+        
+        self.ax2.axhline(self.gt_t[2], color=COLOURS["gt"], linestyle='--', linewidth=1.5, label=f"GT Z: {self.gt_t[2]:.3f}m")
+        
+        self.ax2.set_title("Longitudinal ($Z$ Axis / Depth) Stability")
+        self.ax2.set_ylabel("Z (m)")
+        self.ax2.set_xlabel("Observation Index")
+        self.ax2.legend(loc='upper right')
 
-        # --- Translation Error ---
-        if len(self.raw_trans_error) > 0:
-            self.ax3.plot(
-            self.raw_trans_error,
-            color="#D55E00",        # muted crimson for raw
-            linestyle='--',
-            alpha=0.7,
-            linewidth=1.5,
-            marker='o',
-            markersize=5,
-            markeredgecolor='black',  # black edge for markers
-            markerfacecolor="#D55E00",
-            label="Raw Euclidean Error"
-        )
-
+        if self.raw_trans_error:
+            self.ax3.plot(self.raw_trans_error, color=COLOURS["raw"], marker='o', markersize=4, 
+                         linestyle='-', linewidth=1, markeredgecolor='black', alpha=0.8,
+                         label=f"Raw Error ($\mu$: {m_err*1000:.1f})")
+        
         if self.fused_trans_error is not None:
-            if self.fused_trans_error is not None:
-                self.ax3.axhline(
-                    self.fused_trans_error,
-                    color="#0072B2",       # dark navy for fused
-                    linestyle='-',
-                    linewidth=2,
-                    label="Fused Euclidean Error"
-                )
+            self.ax3.axhline(self.fused_trans_error, color=COLOURS["fused"], 
+                            linewidth=2, label=f"Fused Error: {self.fused_trans_error*1000:.1f}mm")
         
-        self.ax3.axhline(
-            0,
-            color="#009E73",           # dark green
-            linestyle='-.',
-            linewidth=1.5,
-            label="Zero Error Reference"
-        )
+        self.ax3.axhline(0, color=COLOURS["gt"], linestyle='-.', linewidth=1.5, label="Ideal (0mm)")
+        
+        self.ax3.set_title("Total Translation Error (Euclidean Distance)")
+        self.ax3.set_xlabel("Observation Index")
+        self.ax3.set_ylabel("Error (m)")
+        self.ax3.legend(loc='upper right')
 
-        self.ax3.set_title("Euclidean Translation Error Over Frames")
-        self.ax3.set_xlabel("Frame Index")
-        self.ax3.set_ylabel("Error (meters)")
-        self.ax3.legend()
-        self.ax3.grid(True)
-
-        plt.draw()
-        plt.pause(0.1)
-
+        plt.pause(0.01)
 
 def main(args=None):
     rclpy.init(args=args)
-    node = PrecisionAccuracyTester()
+    tester = PrecisionAccuracyTester()
     try:
-        rclpy.spin(node)
+        while rclpy.ok():
+            rclpy.spin_once(tester, timeout_sec=0.01)
+            tester.update_plot()
     except KeyboardInterrupt:
         pass
-    node.destroy_node()
-    rclpy.shutdown()
-
+    finally:
+        tester.destroy_node()
+        rclpy.shutdown()
 
 if __name__ == '__main__':
     main()

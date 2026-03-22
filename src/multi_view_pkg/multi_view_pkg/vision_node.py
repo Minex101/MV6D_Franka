@@ -12,24 +12,20 @@ class PoseCollector(Node):
     def __init__(self):
         super().__init__('vision_node')
 
-        # 1. Subscriber for DOPE detections
         self.subscription = self.create_subscription(
             Detection3DArray,
             '/detections',
             self.detections_callback,
             10)
 
-        # 2. TF2 Buffer and Listener
         self.tf_buffer = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)
 
-        # 3. Publisher for the raw (but transformed) poses
         self.pose_pub = self.create_publisher(
             PoseWithCovarianceStamped, 
             '/object/pose_raw', 
             10)
-        
-        # Target frame for transformations
+
         self.target_frame = 'World'
         self.get_logger().info('Node started, waiting for detections...')
 
@@ -38,13 +34,11 @@ class PoseCollector(Node):
         for detection in msg.detections:
             for result in detection.results:
                 
-                # Create the 'Stamped' version of the pose
                 pose_stamped = PoseStamped()
                 pose_stamped.header = detection_header
                 pose_stamped.pose = result.pose.pose
 
                 try:
-                    # Transform the stamped pose to the target frame
                     transformed_pose = self.tf_buffer.transform(
                         pose_stamped,
                         self.target_frame,
