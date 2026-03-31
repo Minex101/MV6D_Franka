@@ -1,67 +1,100 @@
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import PoseWithCovarianceStamped
+from std_msgs.msg import String
 import numpy as np
+
 
 class FusionNode(Node):
     def __init__(self):
         super().__init__('fusion_node')
-        
-        self.sub = self.create_subscription(PoseWithCovarianceStamped, '/object/pose_raw', self.callback, 10)
-        self.pub = self.create_publisher(PoseWithCovarianceStamped, '/object/pose_filtered', 10)
 
-        # Kalman Parameters (Tuned for stationary bottle)
-        self.R = 0.05      # Measurement Noise (Trust camera less)
-        self.Q = 0.0001    # Process Noise (Bottle doesn't move)
-        self.gate_threshold = 0.2  # Ignore jumps larger than 20cm
+        # -- Publisher --
+        self.publisher = self.create_publisher(
+            PoseWithCovarianceStamped,
+            '/object/pose_fused',
+            10
+        )
 
-        self.x = None
-        self.P = np.array([1.0, 1.0, 1.0])
+        # -- Subscribers --
+        self.subscription = self.create_subscription(
+            PoseWithCovarianceStamped,
+            '/object/pose_raw',
+            self.store_pose_callback,
+            10
+        )
+        self.cmd_sub = self.create_subscription(
+            String,
+            '/fusion/command',
+            self.command_callback,
+            10
+        )
 
-    def callback(self, msg):
-        z = np.array([
-            msg.pose.pose.position.x,
-            msg.pose.pose.position.y,
-            msg.pose.pose.position.z
-        ])
+        # -- State --
+        self.positions = []
+        self.orientations = []
 
-        # 1. Initialize
-        if self.x is None:
-            self.x = z
-            self.get_logger().info("Filter Initialized!")
-            return
+        self.get_logger().info('Fusion Node Ready')
 
-        # 2. Outlier Rejection
-        dist = np.linalg.norm(z - self.x)
-        if dist > self.gate_threshold:
-            self.get_logger().warn(f"Outlier ignored! Jumped {dist:.2f}m")
-            return
+    def store_pose_callback(self, msg):
+        pos = msg.pose.pose.position
+        ori = msg.pose.pose.orientation
 
-        # 3. Kalman filter (independent XYZ)
-        for i in range(3):
-            p_minus = self.P[i] + self.Q
-            k_gain = p_minus / (p_minus + self.R)
-            self.x[i] = self.x[i] + k_gain * (z[i] - self.x[i])
-            self.P[i] = (1 - k_gain) * p_minus
+        self.positions.append([pos.x, pos.y, pos.z])
+        self.orientations.append([ori.x, ori.y, ori.z, ori.w])
 
-        # 4. Publish PoseWithCovarianceStamped
-        out = PoseWithCovarianceStamped()
-        out.header = msg.header
+        self.get_logger().info(f'Buffered snapshot: {len(self.positions)}')
 
-        out.pose.pose.position.x = float(self.x[0])
-        out.pose.pose.position.y = float(self.x[1])
-        out.pose.pose.position.z = float(self.x[2])
+    def command_callback(self, msg):
+        if msg.data == 'SOLVE':
+            if len(self.positions) == 0:
+                self.get_logger().error('Cannot solve: no poses captured!')
+                return
 
-        # Pass-through orientation
-        out.pose.pose.orientation = msg.pose.pose.orientation
+            self.get_logger().info('Solving using simple mean fusion.')
+            self.calculate_and_publish()
 
-        # Fill covariance (XYZ only)
-        out.pose.covariance = [0.0] * 36
-        out.pose.covariance[0]  = self.P[0]  # x
-        out.pose.covariance[7]  = self.P[1]  # y
-        out.pose.covariance[14] = self.P[2]  # z
+    def calculate_and_publish(self):
+        positions = np.array(self.positions)
+        quats = np.array(self.orientations)
 
-        self.pub.publish(out)
+        # --- Simple mean for translation ---
+        avg_pos = np.mean(positions, axis=0)
+
+        # --- Naive quaternion fusion ---
+        # Component-wise mean, then normalize
+        avg_quat = np.mean(quats, axis=0)
+        norm = np.linalg.norm(avg_quat)
+
+        if norm == 0:
+            self.get_logger().warn('Quaternion mean has zero norm, using default identity quaternion.')
+            avg_quat = np.array([0.0, 0.0, 0.0, 1.0])
+        else:
+            avg_quat = avg_quat / norm
+
+        self.get_logger().info(f'Fused Pos: {np.round(avg_pos, 4)}')
+        self.get_logger().info(f'Fused Ori: {np.round(avg_quat, 4)}')
+
+        fused_msg = PoseWithCovarianceStamped()
+        fused_msg.header.stamp = self.get_clock().now().to_msg()
+        fused_msg.header.frame_id = 'World'
+
+        fused_msg.pose.pose.position.x = float(avg_pos[0])
+        fused_msg.pose.pose.position.y = float(avg_pos[1])
+        fused_msg.pose.pose.position.z = float(avg_pos[2])
+
+        fused_msg.pose.pose.orientation.x = float(avg_quat[0])
+        fused_msg.pose.pose.orientation.y = float(avg_quat[1])
+        fused_msg.pose.pose.orientation.z = float(avg_quat[2])
+        fused_msg.pose.pose.orientation.w = float(avg_quat[3])
+
+        self.publisher.publish(fused_msg)
+        self.get_logger().info('Fused pose published.')
+
+        # Clear buffer
+        self.positions = []
+        self.orientations = []
+
 
 def main(args=None):
     rclpy.init(args=args)
@@ -69,6 +102,7 @@ def main(args=None):
     rclpy.spin(node)
     node.destroy_node()
     rclpy.shutdown()
+
 
 if __name__ == '__main__':
     main()
