@@ -136,7 +136,7 @@ class MovementCoordinator(Node):
         while not arrived and rclpy.ok():
             self.joint_pub.publish(msg)
             if self.current_joints is not None:
-                if np.max(np.abs(self.current_joints - target)) < 0.02:
+                if np.max(np.abs(self.current_joints - target)) < 0.015:
                     arrived = True
             await asyncio.sleep(0.1)
         await asyncio.sleep(0.5)

@@ -12,17 +12,18 @@ fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(5,5))
 
 # --- Translation Error per View ---
 bars1 = ax1.bar(views, trans_errors, color='#D55E00', edgecolor='black')
-ax1.axhline(y=T_THRESHOLD, color='#009E73', linestyle='--', label='Max Grasp Tolerance (5cm)')
-ax1.set_ylabel('Translation Error [cm]', fontsize=10)
-ax1.set_title('Spatial Accuracy by Perspective', fontsize=10)
+ax1.axhline(y=T_THRESHOLD, color='#009E73', linestyle='--', label='Translation Tolerance (5cm)')
+ax1.set_ylabel('Translation Error (cm)', fontsize=10)
+ax1.set_title('Translation Accuracy by Perspective', fontsize=10)
 ax1.set_ylim(0, 3.0)
 ax1.legend()
 
 # --- Rotation Error per View ---
 bars2 = ax2.bar(views, rot_errors, color='#D55E00', edgecolor='black')
-ax2.axhline(y=R_THRESHOLD, color='#009E73', linestyle='--', label='Orientation Tolerance (5°)')
-ax2.set_ylabel('Rotation Error [Degrees]', fontsize=10)
-ax2.set_title('Orientation Stability by Perspective', fontsize=10)
+ax2.axhline(y=R_THRESHOLD, color='#009E73', linestyle='--', label='Rotation Tolerance (5°)')
+ax2.set_ylabel('Rotation Error (Degrees)', fontsize=10)
+ax2.set_title('Rotation Accuracy by Perspective', fontsize=10)
+ax2.set_ylim(0, 50)
 ax2.legend()
 
 ax1.grid(axis='both', linestyle='--', alpha=0.7)
