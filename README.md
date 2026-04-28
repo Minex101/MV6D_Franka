@@ -14,8 +14,8 @@ This project implements a **Multi-View 6D Pose Estimation system** designed for 
 The system is divided into three functional nodes to ensure modularity and real-time performance:
 
 1. **Vision Node (Deep Perception):** Detects the target object and estimates its 6D pose from the end-effector camera stream using a TensorRT-accelerated DOPE model.
-2. **Movement Node (Trajectory Coordinator):** Executes an automated "Multi-View" sequence, moving the Franka Panda through four pre-defined viewpoints to overcome self-occlusion.
-3. **Fusion Node (Stochastic Refinement):** Integrates multiple 3D detections to compute a refined object pose.
+2. **Movement Node (Trajectory Coordinator):** Executes an automated "Multi-View" sequence, followed by object search, exposing front, top and lateral viewpoints.
+3. **Fusion Node (Pose Fusion):** Fuses multiple 6D pose estimates to compute a refined object pose using Weighted Translation and Weighted Markley's Quaternion Averaging.
 
 ---
 
