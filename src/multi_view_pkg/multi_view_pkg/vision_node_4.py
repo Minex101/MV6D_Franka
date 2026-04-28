@@ -1,3 +1,15 @@
+"""
+ROS 2 Node for Object Detection and Coordinate Transformation.
+This node utilizes the Deep Object Pose Estimation (DOPE) framework.
+
+Reference:
+Tremblay, J., To, T., Sundaralingam, B., Xiang, Y., Fox, D., & Birchfield, S. (2018).
+Deep Object Pose Estimation for Semantic Robotic Grasping of Household Objects.
+In Conference on Robot Learning (CoRL). arXiv:1809.10790.
+"""
+
+# ---
+
 import rclpy
 from rclpy.node import Node
 import rclpy.duration
@@ -17,103 +29,152 @@ class PoseCollector_2(Node):
     def __init__(self):
         super().__init__('vision_node')
 
-        self.status_pub     = self.create_publisher(String,                    '/fusion/status',         10)
-        self.pose_pub       = self.create_publisher(PoseWithCovarianceStamped, '/object/pose_raw',       10)
-        self.pose_pub_sweep = self.create_publisher(PoseWithCovarianceStamped, '/object/pose_raw_sweep', 10)
-        self.score_pub      = self.create_publisher(Float32,                   '/robot/depth_residual',  10)
+            # -- Publishers --
+        self.status_pub = self.create_publisher(String,
+                                                '/fusion/status',
+                                                10
+        )
+        
+        self.pose_pub = self.create_publisher(PoseWithCovarianceStamped,
+                                              '/object/pose_raw',
+                                              10
+        )
+        
+        self.pose_pub_sweep = self.create_publisher(PoseWithCovarianceStamped,
+                                                    '/object/pose_raw_sweep', 
+                                                    10
+        )
 
+        self.score_pub = self.create_publisher(Float32,
+                                              '/robot/depth_residual',  
+                                              10
+        )
+
+        # -- Subscribers --
+        self.command_sub = self.create_subscription(String,           
+                                                   '/fusion/command',
+                                                   self.command_callback,
+                                                   10
+        )
+
+        self.info_sub = self.create_subscription(CameraInfo,
+                                                 '/camera_info_rect', 
+                                                 self.info_cb,
+                                                 10
+        )
+        
+        self.depth_sub = self.create_subscription(Image, 
+                                                  '/depth', 
+                                                  self.depth_cb,
+                                                  10
+        )
+
+        # -- TF Setup --
         self.bridge      = CvBridge()
         self.tf_buffer   = Buffer()
         self.tf_listener = TransformListener(self.tf_buffer, self)
 
-        self.subscription = self.create_subscription(Detection3DArray, '/detections',       self.detections_callback, 10)
-        self.command_sub  = self.create_subscription(String,           '/fusion/command',   self.command_callback,    10)
-        self.info_sub     = self.create_subscription(CameraInfo,       '/camera_info_rect', self.info_cb,             10)
-        self.depth_sub    = self.create_subscription(Image,            '/depth',            self.depth_cb,            10)
-
+        # -- State Variables --
         self.target_frame         = 'World'
         self.snap_requested       = False
         self.sweep_snap_requested = False
         self.view_count           = 0
         self.latest_depth         = None
         self.intrinsic_matrix     = None
-
-        self.patch_half           = 10
-        self.max_residual         = 0.50
+        self.patch_half_w = 35
+        self.patch_half_h = 70
+        self.max_residual = 1.0
 
         self.get_logger().info('Vision Node Ready')
 
     def info_cb(self, msg):
+
+        """
+        Store the camera intrinsic matrix from the CameraInfo topic.
+        """
+
         self.intrinsic_matrix = np.array(msg.k).reshape(3, 3)
 
     def depth_cb(self, msg):
+
+        """
+        Store the latest depth image from the /depth topic.
+        """
+
         self.latest_depth = self.bridge.imgmsg_to_cv2(msg, desired_encoding='passthrough')
 
     def command_callback(self, msg):
+
+        """
+        Listen for commands from the fusion node to trigger snap or sweep-snap actions.
+        """
+
         if msg.data == 'SNAP':
             self.sweep_snap_requested = False
             self.snap_requested       = True
-            self.get_logger().info('SNAP requested')
-
         elif msg.data == 'SWEEP_SNAP':
             self.snap_requested       = False
             self.sweep_snap_requested = True
-            self.get_logger().info('SWEEP SNAP requested')
-
         elif msg.data == 'CANCEL':
             self.snap_requested       = False
             self.sweep_snap_requested = False
-            self.get_logger().warn('Snap cancelled')
 
     def get_uncertainty(self, pos):
+
+        """
+        Calculate the uncertainty based on the depth residual at the given position.
+        """
+
         if self.latest_depth is None or self.intrinsic_matrix is None:
-            self.get_logger().warn('No depth/intrinsics yet')
             return 0.5
 
         K = self.intrinsic_matrix
-
-        # Project 3D point to pixel coordinates
         point = np.array([pos.x, pos.y, pos.z])
         pixel = K @ point
         if pixel[2] == 0:
             return 0.5
 
-        # Convert to pixel coordinates by removing the depth scaling
         u = int(pixel[0] / pixel[2])
         v = int(pixel[1] / pixel[2])
+
         h, w = self.latest_depth.shape
 
-        # Check if pixel is within image bounds
         if not (0 <= u < w and 0 <= v < h):
             return 0.5
 
-        # Extract a patch around the pixel and compute median depth
-        hp = self.patch_half
-        u_min, u_max = max(0, u - hp), min(w, u + hp + 1)
-        v_min, v_max = max(0, v - hp), min(h, v + hp + 1)
+        half_w = self.patch_half_w
+        half_h = self.patch_half_h
+
+        u_min, u_max = max(0, u - half_w), min(w, u + half_w + 1)
+        v_min, v_max = max(0, v - half_h), min(h, v + half_h + 1)
+
         patch = self.latest_depth[v_min:v_max, u_min:u_max]
 
-        # Filter out invalid depth values (zero or NaN)
         valid = patch[np.isfinite(patch) & (patch > 0)]
 
-        # If too few valid pixels, return high uncertainty
         if valid.size < 5:
             return 1.0
 
-        z_depth     = float(np.median(valid))
-        self.get_logger().info(f"Depth at pixel ({u}, {v}): {z_depth:.4f} m | Point Z: {pos.z:.4f} m")
-        residual    = abs(pos.z - z_depth)
+        z_depth = float(np.median(valid))
+        residual = abs(pos.z - z_depth)
         uncertainty = float(np.clip(residual / self.max_residual, 0.0, 1.0))
+
         return uncertainty
 
     def detections_callback(self, msg):
+
+        """
+        Process incoming detections from the vision system. Depending on the current command state, either trigger a snap or sweep-snap action, calculate uncertainty, 
+        and publish the results.
+        """
+
         if not (self.snap_requested or self.sweep_snap_requested) or not msg.detections:
             return
 
-        det    = msg.detections[0]
-        res    = det.results[0]
+        det = msg.detections[0]
+        res = det.results[0]
         header = msg.header
-        pos    = res.pose.pose.position
+        pos = res.pose.pose.position
 
         if self.snap_requested:
             self.snap_requested = False
@@ -127,10 +188,15 @@ class PoseCollector_2(Node):
             self.process_and_publish(res, header, is_sweep=True, uncertainty=uncertainty)
 
     def process_and_publish(self, result, header, is_sweep, uncertainty=0.05):
+
+        """
+        Take the raw pose result from the detection, transform it to the target frame, and publish it along with the associated uncertainty.
+        """
+
         try:
-            pose_stamped        = PoseStamped()
+            pose_stamped = PoseStamped()
             pose_stamped.header = header
-            pose_stamped.pose   = result.pose.pose
+            pose_stamped.pose = result.pose.pose
 
             transformed_pose = self.tf_buffer.transform(
                 pose_stamped,
@@ -138,15 +204,15 @@ class PoseCollector_2(Node):
                 timeout=rclpy.duration.Duration(seconds=0.1)
             )
 
-            fusion_msg           = PoseWithCovarianceStamped()
-            fusion_msg.header    = transformed_pose.header
+            fusion_msg = PoseWithCovarianceStamped()
+            fusion_msg.header = transformed_pose.header
             fusion_msg.pose.pose = transformed_pose.pose
 
             cov = [0.0] * 36
             var = uncertainty ** 2
 
-            cov[0]  = var
-            cov[7]  = var
+            cov[0] = var
+            cov[7] = var
             cov[14] = var
             cov[21] = var
             cov[28] = var
@@ -154,32 +220,17 @@ class PoseCollector_2(Node):
 
             fusion_msg.pose.covariance = cov
 
-            p = transformed_pose.pose.position
-            o = transformed_pose.pose.orientation
-
             if is_sweep:
                 self.pose_pub_sweep.publish(fusion_msg)
-                self.get_logger().info(
-                    f'Pose Published (Sweep) | '
-                    f'Pos: [{p.x:.4f}, {p.y:.4f}, {p.z:.4f}] | '
-                    f'Ori (XYZW): [{o.x:.4f}, {o.y:.4f}, {o.z:.4f}, {o.w:.4f}]'
-                )
             else:
                 self.pose_pub.publish(fusion_msg)
                 self.status_pub.publish(String(data='SUCCESS'))
                 self.view_count += 1
 
-                self.get_logger().info(
-                    f'Pose Published | View {self.view_count} | '
-                    f'Uncertainty: {uncertainty:.4f} | '
-                    f'Pos: [{p.x:.4f}, {p.y:.4f}, {p.z:.4f}] | '
-                    f'Ori (XYZW): [{o.x:.4f}, {o.y:.4f}, {o.z:.4f}, {o.w:.4f}]'
-                )
-
-        except Exception as e:
-            self.get_logger().error(f'TF Error: {e}')
+        except Exception:
             self.status_pub.publish(String(data='INSTABILITY_DETECTED'))
 
+# --- Main Execution ---
 
 def main(args=None):
     rclpy.init(args=args)

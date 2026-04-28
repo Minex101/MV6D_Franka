@@ -1,32 +1,78 @@
+"""
+Motion plans robot search patterns and IK execution.
+Uses the TRAC-IK inverse kinematics solver for robust pose reachability.
+
+Reference:
+P. Beeson and B. Ames, "TRAC-IK: An open-source library for improved 
+solving of generic inverse kinematics," 2015 IEEE-RAS 15th International 
+Conference on Humanoid Robots (Humanoids), Seoul, 2015, pp. 928-935.
+doi: 10.1109/HUMANOIDS.2015.7363472.
+"""
+
+# ---
+
 import rclpy
 from rclpy.node import Node
+
 from sensor_msgs.msg import JointState
 from std_msgs.msg import String, Float32
 from geometry_msgs.msg import PoseWithCovarianceStamped
+
 import asyncio
 import PyKDL
 import numpy as np
 import time
 from tracikpy import TracIKSolver
 
+
 class MovementCoordinator(Node):
     def __init__(self):
         super().__init__('movement_coordinator')
         
-        self.joint_pub = self.create_publisher(JointState, '/joint_command', 10)
-        self.cmd_pub = self.create_publisher(String, '/fusion/command', 10)
-        self.joint_sub = self.create_subscription(JointState, '/joint_states', self.joint_states_cb, 10)
-        self.status_sub = self.create_subscription(String, '/fusion/status', self.status_cb, 10)
-        self.pose_sub_sweep = self.create_subscription(PoseWithCovarianceStamped, '/object/pose_raw_sweep', self.sweep_cb, 10)
-        self.uncertainty_sub = self.create_subscription(Float32, '/robot/depth_residual', self.uncertainty_cb, 10)
+        # -- Publishers --
+        self.joint_pub = self.create_publisher(JointState, 
+                                                '/joint_command', 
+                                                10
+        )
+        
+        self.cmd_pub = self.create_publisher(String, 
+                                            '/fusion/command', 
+                                            10
+        )
+        
+        # -- Subscribers --
+        self.joint_sub = self.create_subscription(JointState, 
+                                                  '/joint_states', 
+                                                  self.joint_states_cb, 
+                                                  10
+        )
 
+        self.status_sub = self.create_subscription(String, 
+                                                   '/fusion/status', 
+                                                   self.status_cb, 
+                                                   10
+        )
+        
+        self.pose_sub_sweep = self.create_subscription(PoseWithCovarianceStamped, 
+                                                       '/object/pose_raw_sweep', 
+                                                       self.sweep_cb, 
+                                                       10
+        )
+        
+        self.uncertainty_sub = self.create_subscription(Float32, 
+                                                        '/robot/depth_residual', 
+                                                        self.uncertainty_cb, 
+                                                        10
+        )
+
+        # -- IK Setup --
         self.panda_joints = ["panda_joint1", "panda_joint2", "panda_joint3", "panda_joint4", "panda_joint5", "panda_joint6", "panda_joint7"]   
         self.urdf_path = "/home/affan/Documents/FY_Project/isaac_sim_assets/franka.urdf"
         self.base_link = "World" 
         self.ee_link = "franka_panda_hand" 
-        
         self.ik_solver = TracIKSolver(self.urdf_path, self.base_link, self.ee_link, timeout=0.20, epsilon=1e-5, solve_type="Distance")
         
+        # -- State Variables --
         self.object_found = False
         self.current_joints = None
         self.found_pose = None
@@ -34,9 +80,19 @@ class MovementCoordinator(Node):
         self.waiting_for_vision = False
 
     def uncertainty_cb(self, msg):
+
+        """
+        Store the latest uncertainty value from the depth residual topic.
+        """
+
         self.current_uncertainty = msg.data
 
     def joint_states_cb(self, msg):
+
+        """
+        Update current joint states from the /joint_states topic.
+        """
+        
         try:
             positions = [msg.position[msg.name.index(name)] for name in self.panda_joints]
             self.current_joints = np.array(positions)
@@ -52,6 +108,11 @@ class MovementCoordinator(Node):
         self.object_found = True
 
     def calculate_ik_quaternion(self, dx, dy, dz, pitch_rad, divisor=0):
+
+        """
+        Calculate the IK solution for a given offset from the found object pose. The offset is defined by dx, dy, dz for position and pitch_rad for orientation.
+        """
+
         if not self.found_pose: return None
         
         tx, ty, tz = self.found_pose.position.x, self.found_pose.position.y, self.found_pose.position.z
@@ -76,6 +137,11 @@ class MovementCoordinator(Node):
         return qout.tolist() if qout is not None else None
 
     async def run_scan_pattern(self):
+
+        """
+        Execute the full scan pattern: search for the object, move to each viewpoint, trigger vision actions, and finally command the fusion node to solve.
+        """
+
         start_time = time.time()
         self.get_logger().info("🔍 Starting Search...")
         
@@ -117,6 +183,11 @@ class MovementCoordinator(Node):
             self.get_logger().error("❌ Object not found.")
 
     async def search_for_object(self):
+
+        """
+        Perform a sweeping search pattern by moving to predefined viewpoints and triggering the vision node to look for the object. If the object is found at any point, return True.
+        """
+
         search_poses = [
             [1.55, -0.7, -0.2, -1.0, 0.0, 0.8, 0.5],
             [0.0, -0.7, -0.2, -1.0, 0.0, 0.8, 0.5],
@@ -130,6 +201,11 @@ class MovementCoordinator(Node):
         return False
 
     async def move_to_viewpoint(self, pose):
+        
+        """
+        Publish the given joint pose and wait until the robot reaches it within a threshold.
+        """
+
         msg = JointState(name=self.panda_joints, position=pose)
         target = np.array(pose)
         arrived = False
@@ -140,6 +216,8 @@ class MovementCoordinator(Node):
                     arrived = True
             await asyncio.sleep(0.1)
         await asyncio.sleep(0.5)
+
+# -- Main Execution --
 
 async def run_node(node):
     task = asyncio.create_task(node.run_scan_pattern())

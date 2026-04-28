@@ -1,3 +1,18 @@
+"""
+Fusion Node for Multi-View Object Pose Estimation.
+This node integrates multiple 3D detections to compute a refined object pose.
+
+The position is mean averaged, while the orientation 
+averaging is based on the Singular Value Decomposition (SVD) method.
+
+Reference:
+Markley, F. L., Cheng, Y., Crassidis, J. L., & Oshman, Y. (2007). 
+"Averaging Quaternions." Journal of Guidance, Control, and Dynamics, 
+30(4), 1193-1197. https://doi.org/10.2514/1.28949
+"""
+
+# ---
+
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import PoseWithCovarianceStamped
@@ -36,7 +51,7 @@ class FusionNode(Node):
             10
         )
 
-        # -- State --
+        # -- State Variables --
         self.positions = []
         self.orientations = []
         self.residuals = []
@@ -46,6 +61,11 @@ class FusionNode(Node):
         self.get_logger().info('🔀 Fusion Node Ready (Depth-Weighted Only)')
 
     def store_pose_callback(self, msg):
+
+        """
+        Store incoming pose estimates from the vision node. Each pose is buffered along with its corresponding orientation for later fusion when a SOLVE command is received.
+        """
+
         pos = msg.pose.pose.position
         ori = msg.pose.pose.orientation
 
@@ -58,6 +78,12 @@ class FusionNode(Node):
         self.residuals.append(float(msg.data))
 
     def command_callback(self, msg):
+
+        """
+        Listen for commands from the movement node. When a 'SOLVE' command is received, trigger the fusion process using the buffered poses and their corresponding depth 
+        residuals to calculate a weighted average pose, which is then published.
+        """
+
         if msg.data == 'SOLVE':
             if len(self.positions) == 0 or len(self.residuals) == 0:
                 self.get_logger().error('❌ Cannot solve: no poses or residuals captured!')
@@ -67,6 +93,12 @@ class FusionNode(Node):
             self.calculate_and_publish()
 
     def calculate_and_publish(self):
+
+        """
+        Perform depth-weighted fusion of the buffered pose estimates. 
+        Each pose's contribution to the final fused result is weighted inversely proportional to its depth residual, giving more
+        """
+
         positions = np.array(self.positions, dtype=np.float64)
         quats = np.array(self.orientations, dtype=np.float64)
         residuals = np.array(self.residuals, dtype=np.float64)
@@ -98,7 +130,7 @@ class FusionNode(Node):
         # Weighted translation average
         avg_pos = np.average(positions, axis=0, weights=weights)
 
-        # Weighted quaternion fusion (chordal L2 / Markley-style)
+        # Weighted quaternion fusion (Markley)
         M = np.zeros((4, 4), dtype=np.float64)
         for q, w in zip(quats, weights):
             q = q / np.linalg.norm(q)
@@ -132,6 +164,7 @@ class FusionNode(Node):
         self.orientations = []
         self.residuals = []
 
+# --- Main Execution ---
 
 def main(args=None):
     rclpy.init(args=args)
