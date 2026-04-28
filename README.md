@@ -1,7 +1,6 @@
 # Multi-View Pose Estimation with Franka Panda for Picking and Packing in Warehouses
 ### BEng Mechatronics and Robotics (Industrial) | University of Leeds
 **Author:** Affan Ahmed Khan Mohammed  
-**Student ID:** 201621240  
 
 ---
 
