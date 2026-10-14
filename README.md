@@ -1,6 +1,10 @@
 # Multi-View Pose Estimation with Franka Panda for Picking and Packing in Warehouses
-### BEng Mechatronics and Robotics (Industrial) | University of Leeds
-**Author:** Affan Ahmed Khan Mohammed  
+
+![python](https://img.shields.io/badge/python-3.10-blue)
+![ROS2](https://img.shields.io/badge/ROS2-Humble-orange)
+![IsaacSim](https://img.shields.io/badge/IsaacSim-4.5.0-red)
+![IsaacLab](https://img.shields.io/badge/IsaacLab-2.1.0-purple)
+![platform](https://img.shields.io/badge/platform-Ubuntu--22.04-green)
 
 ---
 
@@ -16,16 +20,27 @@ The system is divided into three functional nodes to ensure modularity and real-
 2. **Movement Node (Trajectory Coordinator):** Executes an automated "Multi-View" sequence, followed by object search, exposing front, top and lateral viewpoints.
 3. **Fusion Node (Pose Fusion):** Fuses multiple 6D pose estimates to compute a refined object pose using Weighted Translation and Weighted Markley's Quaternion Averaging.
 
+## 🎖️Results
+
+Evaluated in simulation on objects from the HOPE dataset on across 50 samples.
+
+| Metric | Single-view | Fused multi-view | Improvement |
+| --- | --- | --- | --- |
+| Mean translation error | 7.55 cm | 0.96 cm | 87.3% lower |
+| Median translation error | 1.45 cm | 0.77 cm | 46.9% lower |
+| Mean rotation error | 17.90° | 6.13° | 65.8% lower |
+| Median rotation error | 5.81° | 3.20° | 44.9% lower |
+
 ---
 
 ## 🔗 Dependencies & Quick Links
 
 | Component | Purpose | Official Resource |
 | :--- | :--- | :--- |
-| **NVIDIA Isaac Sim** | Physics & Rendering | [Documentation](https://docs.omniverse.nvidia.com/isaacsim/latest/index.html) |
-| **NVIDIA DOPE** | 6D Pose Estimation | [GitHub Repository](https://github.com/NVlabs/Deep_Object_Pose_Estimation) |
+| **NVIDIA Isaac Sim** | Simulation, Physics & Rendering | [Documentation](https://docs.omniverse.nvidia.com/isaacsim/latest/index.html) |
+| **NVIDIA DOPE** | 6D Pose Estimation | [GitHub Repository]([https://github.com/NVlabs/Deep_Object_Pose_Estimation](https://nvidia-isaac-ros.github.io/repositories_and_packages/isaac_ros_pose_estimation/isaac_ros_dope/index.html)) |
 | **ROS 2 Humble** | Robotics Middleware | [Installation Guide](https://docs.ros.org/en/humble/Installation.html) |
-| **Trac-IK** | IK Solver | [Trac-IK Py Bindings](https://github.com/m-andreas/trac_ik_python) |
+| **Trac-IK** | IK Solver for Trajectory Planning | [Trac-IK Py Bindings]([https://github.com/m-andreas/trac_ik_python](https://moveit.picknik.ai/main/doc/how_to_guides/trac_ik/trac_ik_tutorial.html#install)) |
 
 ---
 
