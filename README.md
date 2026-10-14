@@ -8,9 +8,19 @@
 ## 📌 Project Overview
 This project implements a **Multi-View 6D Pose Estimation system** designed for warehouse pick-and-pack operations. By utilizing a **Franka Panda** robot arm in **NVIDIA Isaac Sim**, the system captures a target object from multiple strategic viewpoints to refine pose accuracy and reduce uncertainty using a stochastic fusion approach.
 
-<video src="https://github.com/Minex101/MV6D_Franka/raw/main/Videos/Media1.mp4" controls width="720"></video>
+## 🎥 Demo
 
-▶️ [Watch the demo video](Videos/Media1.mp4)
+### Multi-View Capture in Isaac Sim
+
+https://github.com/user-attachments/assets/25487db9-554e-42b8-85e7-ab8e0f5335da
+
+*Figure 1: After a sweep search finds the target, the Franka Panda moves to object-centric viewpoints around it, pausing at each one to capture a pose observation.*
+
+### Eye-in-Hand Camera Perspective
+
+https://github.com/user-attachments/assets/d240e825-621f-406e-9de9-fe9e78ec48bd
+
+*Figure 2: The same run from the RealSense D435 mounted on the gripper, showing what the camera sees from each viewpoint.*
 
 ## 🏗 System Architecture
 The system is divided into three functional nodes to ensure modularity and real-time performance:
