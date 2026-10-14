@@ -10,13 +10,9 @@ This project implements a **Multi-View 6D Pose Estimation system** designed for 
 
 ## 🎥 Demo
 
-### Multi-View Capture in Isaac Sim
-
 https://github.com/user-attachments/assets/cc959a7c-9ba0-4f62-a6a7-cfd177b745d9
 
 *Figure 1: After a sweep search finds the target, the Franka Panda moves to object-centric viewpoints around it, pausing at each one to capture a pose observation.*
-
-### Eye-in-Hand Camera Perspective
 
 https://github.com/user-attachments/assets/d240e825-621f-406e-9de9-fe9e78ec48bd
 
