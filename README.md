@@ -4,6 +4,8 @@
 ![platform](https://img.shields.io/badge/platform-Ubuntu--22.04-green)
 ![IsaacSim](https://img.shields.io/badge/IsaacSim-5.1.0-red)
 ![ROS2](https://img.shields.io/badge/ROS2-Humble-orange)
+![IsaacROS](https://img.shields.io/badge/IsaacROS-4.4.0-76B900)
+![TRAC-IK](https://img.shields.io/badge/TRAC--IK-2.2.0-teal)
 
 ## 📌 Project Overview
 This project implements a **Multi-View 6D Pose Estimation system** designed for warehouse pick-and-pack operations. By utilizing a **Franka Panda** robot arm in **NVIDIA Isaac Sim**, the system captures a target object from multiple strategic viewpoints to refine pose accuracy and reduce uncertainty using a stochastic fusion approach.
