@@ -8,6 +8,8 @@
 ## 📌 Project Overview
 This project implements a **Multi-View 6D Pose Estimation system** designed for warehouse pick-and-pack operations. By utilizing a **Franka Panda** robot arm in **NVIDIA Isaac Sim**, the system captures a target object from multiple strategic viewpoints to refine pose accuracy and reduce uncertainty using a stochastic fusion approach.
 
+<video src="https://github.com/Minex101/MV6D_Franka/raw/main/Videos/Media1.mp4" controls width="720"></video>
+
 ## 🏗 System Architecture
 The system is divided into three functional nodes to ensure modularity and real-time performance:
 
