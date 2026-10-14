@@ -6,12 +6,9 @@
 ![IsaacLab](https://img.shields.io/badge/IsaacLab-2.1.0-purple)
 ![platform](https://img.shields.io/badge/platform-Ubuntu--22.04-green)
 
----
 
 ## 📌 Project Overview
 This project implements a **Multi-View 6D Pose Estimation system** designed for warehouse pick-and-pack operations. By utilizing a **Franka Panda** robot arm in **NVIDIA Isaac Sim**, the system captures a target object from multiple strategic viewpoints to refine pose accuracy and reduce uncertainty using a stochastic fusion approach.
-
----
 
 ## 🏗 System Architecture
 The system is divided into three functional nodes to ensure modularity and real-time performance:
@@ -31,8 +28,6 @@ Evaluated in simulation on objects from the HOPE dataset on across 50 samples.
 | Mean rotation error | 17.90° | 6.13° | 65.8% lower |
 | Median rotation error | 5.81° | 3.20° | 44.9% lower |
 
----
-
 ## 🔗 Dependencies & Quick Links
 
 | Component | Purpose | Official Resource |
@@ -41,8 +36,6 @@ Evaluated in simulation on objects from the HOPE dataset on across 50 samples.
 | **NVIDIA DOPE** | 6D Pose Estimation | [GitHub Repository]([https://github.com/NVlabs/Deep_Object_Pose_Estimation](https://nvidia-isaac-ros.github.io/repositories_and_packages/isaac_ros_pose_estimation/isaac_ros_dope/index.html)) |
 | **ROS 2 Humble** | Robotics Middleware | [Installation Guide](https://docs.ros.org/en/humble/Installation.html) |
 | **Trac-IK** | IK Solver for Trajectory Planning | [Trac-IK Py Bindings]([https://github.com/m-andreas/trac_ik_python](https://moveit.picknik.ai/main/doc/how_to_guides/trac_ik/trac_ik_tutorial.html#install)) |
-
----
 
 ## 🛠 Setup & Installation
 
