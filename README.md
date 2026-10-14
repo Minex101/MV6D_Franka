@@ -12,10 +12,7 @@ This project implements a **Multi-View 6D Pose Estimation system** designed for 
 
 ### Multi-View Capture in Isaac Sim
 
-
 https://github.com/user-attachments/assets/cc959a7c-9ba0-4f62-a6a7-cfd177b745d9
-
-
 
 *Figure 1: After a sweep search finds the target, the Franka Panda moves to object-centric viewpoints around it, pausing at each one to capture a pose observation.*
 
@@ -26,11 +23,14 @@ https://github.com/user-attachments/assets/d240e825-621f-406e-9de9-fe9e78ec48bd
 *Figure 2: The same run from the RealSense D435 mounted on the gripper, showing what the camera sees from each viewpoint.*
 
 ## 🏗 System Architecture
-The system is divided into three functional nodes to ensure modularity and real-time performance:
 
-1. **Vision Node (Deep Perception):** Detects the target object and estimates its 6D pose from the end-effector camera stream using a TensorRT-accelerated DOPE model.
-2. **Movement Node (Trajectory Coordinator):** Executes an automated "Multi-View" sequence, followed by object search, exposing front, top and lateral viewpoints.
-3. **Fusion Node (Pose Fusion):** Fuses multiple 6D pose estimates to compute a refined object pose using Weighted Translation and Weighted Markley's Quaternion Averaging.
+The system is split into three ROS 2 nodes that communicate over topics, which keeps perception, motion and fusion modular and easy to test.
+
+1. **Vision Node (Deep Perception):** Runs DOPE on the end-effector camera stream to estimate the target's 6D pose, then transforms it into the world frame using TF. It also scores each observation with a **depth-residual uncertainty metric**, which compares DOPE's predicted depth with the RealSense depth measurement. Poses are captured on demand, only when the arm is stationary, which cut translation RMSE by 32.5%, 26.6% and 47.4% along X, Y and Z compared with continuous sampling.
+   
+2. **Movement Node (Trajectory Coordinator):** Runs a sweep search to find the object, then uses custom **object-centric viewpoint planning algorithm** to compute camera viewpoints. It computes front, top, left and right end-effector poses relative to the detected object, solves them with TRAC-IK, and captures an observation at each reachable viewpoint. Unlike fixed joint-space viewpoints, it adapts to wherever the object is.
+   
+3. **Fusion Node (Pose Fusion):** Combines the observations into one refined pose using **uncertainty-weighted fusion**. Each observation gets a weight inversely proportional to its uncertainty score, so unreliable views count for less. Translations are fused by weighted averaging, and rotations by weighted **Markley quaternion averaging**, which avoids the sign ambiguity of simple quaternion averaging.
 
 ## 🎖️Results
 
