@@ -17,7 +17,7 @@ The system is divided into three functional nodes to ensure modularity and real-
 
 ## 🎖️Results
 
-Evaluated in simulation on objects from the HOPE dataset on across 50 samples.
+Evaluated in simulation on objects from the HOPE dataset on across 50 samples with varying clutter. Our solution shows significant improvements as displayed below:
 
 | Metric | Single-view | Fused multi-view | Improvement |
 | --- | --- | --- | --- |
