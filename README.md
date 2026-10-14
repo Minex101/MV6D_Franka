@@ -3,7 +3,6 @@
 ![python](https://img.shields.io/badge/python-3.10-blue)
 ![ROS2](https://img.shields.io/badge/ROS2-Humble-orange)
 ![IsaacSim](https://img.shields.io/badge/IsaacSim-4.5.0-red)
-![IsaacLab](https://img.shields.io/badge/IsaacLab-2.1.0-purple)
 ![platform](https://img.shields.io/badge/platform-Ubuntu--22.04-green)
 
 
@@ -30,39 +29,40 @@ Evaluated in simulation on objects from the HOPE dataset on across 50 samples.
 
 ## 🔗 Dependencies & Quick Links
 
-| Component | Purpose | Official Resource |
-| :--- | :--- | :--- |
-| **NVIDIA Isaac Sim** | Simulation, Physics & Rendering | [Documentation](https://docs.omniverse.nvidia.com/isaacsim/latest/index.html) |
-| **NVIDIA DOPE** | 6D Pose Estimation | [GitHub Repository]([https://github.com/NVlabs/Deep_Object_Pose_Estimation](https://nvidia-isaac-ros.github.io/repositories_and_packages/isaac_ros_pose_estimation/isaac_ros_dope/index.html)) |
-| **ROS 2 Humble** | Robotics Middleware | [Installation Guide](https://docs.ros.org/en/humble/Installation.html) |
-| **Trac-IK** | IK Solver for Trajectory Planning | [Trac-IK Py Bindings]([https://github.com/m-andreas/trac_ik_python](https://moveit.picknik.ai/main/doc/how_to_guides/trac_ik/trac_ik_tutorial.html#install)) |
+Install these in order, following each official guide.
+
+| Step | Component | Purpose | Official Resource |
+| :--- | :--- | :--- | :--- |
+| 1 | **ROS 2 Humble** | Robotics middleware | [Installation Guide](https://docs.ros.org/en/humble/Installation.html) |
+| 2 | **NVIDIA Isaac Sim** | Simulation, physics and rendering | [Documentation](https://docs.omniverse.nvidia.com/isaacsim/latest/index.html) |
+| 3 | **NVIDIA DOPE** | 6D pose estimation | [Isaac ROS DOPE](https://nvidia-isaac-ros.github.io/repositories_and_packages/isaac_ros_pose_estimation/isaac_ros_dope/index.html) |
+| 4 | **TRAC-IK** | IK solver for trajectory planning | [Install guide](https://moveit.picknik.ai/main/doc/how_to_guides/trac_ik/trac_ik_tutorial.html#install) |
+
+Isaac Sim needs an NVIDIA RTX GPU. After installing it, enable the **ROS 2 bridge** extension so the simulator can talk to ROS 2.
 
 ## 🛠 Setup & Installation
 
-### 1. Clone the Repository
+### 1. Clone the repository
+
 ```bash
 mkdir -p ~/ros2_ws/src
 cd ~/ros2_ws/src
 git clone https://github.com/Minex101/MV6D_Franka.git
 ```
 
-2. Install Python Dependencies
-```Bash
+### 2. Build the package
 
-pip install numpy pykdl tracikpy
-```
-3. Build the Package
-```Bash
-
+```bash
 cd ~/ros2_ws
 colcon build --packages-select multi_view_pkg
 source install/setup.bash
 ```
-🎮 Usage
-Launching the Full System
 
-To start the perception, movement, and fusion nodes simultaneously:
-```Bash
+### 3. Run
 
+1. Open Isaac Sim and load the scene 1.usd provided in isaac_sim_assets
+2. In a terminal where you've sourced the workspace, launch the full system:
+
+```bash
 ros2 launch multi_view_pkg pipeline.launch.py
 ```
