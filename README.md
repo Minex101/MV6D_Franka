@@ -1,10 +1,9 @@
 # Multi-View Pose Estimation with Franka Panda for Picking and Packing in Warehouses
 
 ![python](https://img.shields.io/badge/python-3.10-blue)
-![ROS2](https://img.shields.io/badge/ROS2-Humble-orange)
-![IsaacSim](https://img.shields.io/badge/IsaacSim-4.5.0-red)
 ![platform](https://img.shields.io/badge/platform-Ubuntu--22.04-green)
-
+![IsaacSim](https://img.shields.io/badge/IsaacSim-5.1.0-red)
+![ROS2](https://img.shields.io/badge/ROS2-Humble-orange)
 
 ## 📌 Project Overview
 This project implements a **Multi-View 6D Pose Estimation system** designed for warehouse pick-and-pack operations. By utilizing a **Franka Panda** robot arm in **NVIDIA Isaac Sim**, the system captures a target object from multiple strategic viewpoints to refine pose accuracy and reduce uncertainty using a stochastic fusion approach.
