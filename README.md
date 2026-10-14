@@ -10,6 +10,8 @@ This project implements a **Multi-View 6D Pose Estimation system** designed for 
 
 <video src="https://github.com/Minex101/MV6D_Franka/raw/main/Videos/Media1.mp4" controls width="720"></video>
 
+▶️ [Watch the demo video](Videos/Media1.mp4)
+
 ## 🏗 System Architecture
 The system is divided into three functional nodes to ensure modularity and real-time performance:
 
