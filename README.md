@@ -12,7 +12,7 @@ This project implements a **Multi-View 6D Pose Estimation system** designed for 
 
 ## 🎥 Demo
 
-https://github.com/user-attachments/assets/cc959a7c-9ba0-4f62-a6a7-cfd177b745d9
+<img width="796" height="769" alt="Media1" src="https://github.com/user-attachments/assets/fd1d1492-121f-4977-bb7d-48be31579537" />
 
 *Figure 1: After a sweep search finds the target, the Franka Panda moves to object-centric viewpoints around it, pausing at each one to capture a pose observation.*
 
