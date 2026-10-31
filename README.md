@@ -12,13 +12,9 @@ This project implements a **Multi-View 6D Pose Estimation system** designed for 
 
 ## 🎥 Demo
 
-<img width="796" height="769" alt="Media1" src="https://github.com/user-attachments/assets/fd1d1492-121f-4977-bb7d-48be31579537" />
+https://github.com/user-attachments/assets/d2186c08-be8e-4189-a54d-1d42bdbc4074
 
-*Figure 1: After a sweep search finds the target, the Franka Panda moves to object-centric viewpoints around it, pausing at each one to capture a pose observation.*
-
-https://github.com/user-attachments/assets/d240e825-621f-406e-9de9-fe9e78ec48bd
-
-*Figure 2: The same run from the RealSense D435 mounted on the gripper, showing what the camera sees from each viewpoint.*
+*Figure 1: After a sweep search finds the target, the Franka Panda moves to object-centric viewpoints around it, pausing at each one to capture a pose observation and uncertainty quantification.*
 
 ## 🏗 System Architecture
 
